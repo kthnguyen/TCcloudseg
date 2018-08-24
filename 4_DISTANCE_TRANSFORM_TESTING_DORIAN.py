@@ -14,7 +14,8 @@ from matplotlib import colors
 import h5py
 from scipy import ndimage
 import os
-
+import cv2
+from skimage.morphology import watershed
 
 WORKPLACE = r"C:\Users\z3439910\Documents\Kien\1_Projects\2_Msc\1_E1\5_GIS_project"
 IRDIR = WORKPLACE + r"\IRimages2013"
@@ -22,7 +23,7 @@ SAVDIR = WORKPLACE + r"\3_Figures"
 BTDIR = WORKPLACE + r"\2_IBTrACSfiles"
 os.chdir(IRDIR)
 
-#%% Functions
+#% Functions
 def calcdistance_km(latA,lonA,latB,lonB):
     dist = np.sqrt(np.square(latA-latB)+np.square(lonA-lonB))*111
     return np.int(dist)
@@ -88,14 +89,14 @@ def get_BTempimage_bound(latmin,latmax,lonmin,lonmax):
     lon_val_bound = [val for i,val in enumerate(BTemp_lon) if (val>lonmin and val<lonmax)] 
     return[lat_bound[0],lat_bound[-1],lon_bound[0],lon_bound[-1]]
 
-#%% Get idices in accordance with brightness temperature images
+#% Get idices in accordance with brightness temperature images
 IMAG_RES = 4 #km
 DEG_TO_KM = 111 #ratio
 LAT_BOUND = [0,60] #NA Basin
 LON_BOUND = [-120,0] #NA Basin
 DIM_BOUND = get_BTempimage_bound(LAT_BOUND[0],LAT_BOUND[1],LON_BOUND[0],LON_BOUND[1])#incices from BT images
 
-#%% Best track for a particular storm based on its serial
+#% Best track for a particular storm based on its serial
 # get TC estimated centers
 B_tracks = xr.open_dataset(BTDIR+"\\"+"Year.2013.ibtracs_all.v03r10.nc")
 
@@ -132,12 +133,12 @@ I_minute = pd.to_datetime(I_time_interpolate['time'].values).minute
 I_lat = I_time_interpolate['lat']
 I_lon = I_time_interpolate['lon']
 
-#%% Create an HDF5 file to store label for the current storm
+#% Create an HDF5 file to store label for the current storm
 DIM_LAT = DIM_BOUND[1]-DIM_BOUND[0] + 1
 DIM_LON = DIM_BOUND[3]-DIM_BOUND[2] + 1
 DIM_TIME = np.shape(I_time_interpolate['time'])[0]
 
-#%%
+#%
 C_i = 590
 BTemp_filename = r"merg_"+ time_to_string_without_min(I_year[C_i],I_month[C_i],I_day[C_i],I_hour[C_i]) + r"_4km-pixel.nc4"
     
@@ -159,7 +160,7 @@ elif I_minute[C_i] == 30:
     mask = np.isnan(C_BTemp)
     C_BTemp[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), C_BTemp[~mask])
 
-#%%
+#%
 fig = plt.figure()
 lat_max = np.round(np.max(C_lat),1)
 lat_min = np.round(np.min(C_lat),1)
@@ -181,11 +182,30 @@ ax.set_ylabel('Latitude')
 plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2)     
 
 #%%
-C_binary = np.where(C_BTemp<270,0,C_BTemp)
+C_binary = np.where(C_BTemp>270,0,C_BTemp)
 C_binary = np.where(C_binary>1,1,C_binary)
+C_binary8 = C_binary.astype(np.uint8)
+
+C_img = np.where(C_BTemp>270,0,C_BTemp)
+C_img = np.where(C_img >1,255,C_binary)
 
 #%
-C_binary_dt = ndimage.distance_transform_edt(np.logical_not(C_binary))
+# noise removal
+kernel = np.ones((3,3),np.uint8)
+C_binary8_m = cv2.morphologyEx(C_binary8,cv2.MORPH_OPEN,kernel, iterations = 2)
+# sure background area
+sure_bg = cv2.dilate(C_binary8_m,kernel,iterations=3)
+#C_binary_dt = ndimage.distance_transform_edt(C_binary)
+C_binary_dt = cv2.distanceTransform(C_binary8,cv2.DIST_L2,5)
+ret, sure_fg = cv2.threshold(C_binary_dt,0.02*C_binary_dt.max(),255,0)
+sure_fg = np.uint8(sure_fg)
+ret, markers = cv2.connectedComponents(sure_fg)
+unknown = cv2.subtract(sure_bg,sure_fg)
+# Add one to all labels so that sure background is not 0, but 1
+markers = markers+1
+# Now, mark the region of unknown with zero
+markers[unknown==255] = 0
+w_markers = watershed(-C_binary_dt,markers, mask = C_binary8)
 #%
 fig = plt.figure()
 lat_max = np.round(np.max(C_lat),1)
@@ -194,18 +214,22 @@ lon_max = np.round(np.max(C_lon),1)
 lon_min = np.round(np.min(C_lon),1)
 filename = TC_serial+ "_" + I_name + "_" + time_to_string_with_min(I_year[C_i], I_month[C_i], I_day[C_i], I_hour[C_i], I_minute[C_i])
 
-plt.subplot(211)
+plt.subplot(221)
 #% Plot BT image with 3 labels
-im = plt.imshow(C_binary, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
+im = plt.imshow(C_binary8, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys_r',origin='lower')
 # Best track center
 plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
 ax = plt.gca()
 ax.set_title(filename)
 ax.set_xlabel('Longitude')
 
-plt.subplot(212)
+plt.subplot(222)
 #% Plot BT image with 3 labels
-im = plt.imshow(C_binary_dt, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
+im = plt.imshow(C_binary_dt, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys_r',origin='lower')
+plt.subplot(223)
+im = plt.imshow(sure_fg, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys_r',origin='lower')
+plt.subplot(224)
+im = plt.imshow(w_markers, extent = (lon_min, lon_max, lat_min, lat_max),origin='lower')
 # Best track center
 plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
 ax = plt.gca()
@@ -215,7 +239,7 @@ ax.set_ylabel('Latitude')
 
 
 ax.set_ylabel('Latitude')
-plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2)         
+plt.show()    
 
 
 
