@@ -180,7 +180,7 @@ ax.set_xlabel('Longitude')
 ax.set_ylabel('Latitude')
 plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2)     
 
-#%%
+#%% TEST DISTANCE TRANSFORM AND WATERSHED
 C_binary = np.where(C_BTemp>270,0,C_BTemp)
 C_binary = np.where(C_binary>1,1,C_binary)
 C_binary8 = C_binary.astype(np.uint8)
@@ -205,7 +205,7 @@ markers = markers+1
 # Now, mark the region of unknown with zero
 markers[unknown==255] = 0
 w_markers = watershed(-C_binary_dt,markers, mask = C_binary8)
-#%%
+#%
 fig = plt.figure()
 lat_max = np.round(np.max(C_lat),1)
 lat_min = np.round(np.min(C_lat),1)
@@ -225,6 +225,7 @@ ax.set_xlabel('Longitude')
 plt.subplot(222)
 #% Plot BT image with 3 labels
 im = plt.imshow(C_binary_dt, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys_r',origin='lower')
+plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
 plt.subplot(223)
 im = plt.imshow(sure_fg, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys_r',origin='lower')
 plt.subplot(224)
@@ -240,5 +241,51 @@ ax.set_ylabel('Latitude')
 ax.set_ylabel('Latitude')
 plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2)         
 
+#%% Hough circle
+img = sure_bg[:]
+cimg = sure_bg[:]
+circles = cv2.HoughCircles(img,cv2.HOUGH_GRADIENT,1,20,
+                            param1=50,param2=30,minRadius=0,maxRadius=0)
+circles = np.uint16(np.around(circles))
+for i in circles[0,:]:
+    # draw the outer circle
+    cv2.circle(cimg,(i[0],i[1]),i[2],(0,255,0),2)
+    # draw the center of the circle
+    cv2.circle(cimg,(i[0],i[1]),2,(0,0,255),3)
 
+cv2.imshow('detected circles',cimg)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
 
+#%% TEST CANNY
+C_binary = np.where(C_BTemp>270,0,C_BTemp)
+C_binary = np.where(C_binary>1,1,C_binary)
+C_binary8 = C_binary.astype(np.uint8)
+
+C_img = np.where(C_BTemp>270,0,C_BTemp)
+C_img = np.where(C_img >1,255,C_binary)
+
+#%
+kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(8,8))
+res = cv2.dilate(C_binary8,kernel,iterations=1)
+res2 = cv2.erode(res,kernel,iterations = 1)
+
+edges = cv2.Canny(res,0,1)
+fig = plt.figure()
+lat_max = np.round(np.max(C_lat),1)
+lat_min = np.round(np.min(C_lat),1)
+lon_max = np.round(np.max(C_lon),1)
+lon_min = np.round(np.min(C_lon),1)
+filename = TC_serial+ "_" + I_name + "_" + time_to_string_with_min(I_year[C_i], I_month[C_i], I_day[C_i], I_hour[C_i], I_minute[C_i])
+
+#% Plot BT image with 3 labels
+plt.subplot(211)
+im2 = plt.imshow(C_binary8, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys_r',origin='lower')
+plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
+plt.subplot(212)
+im = plt.imshow(res2, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys_r',origin='lower')
+# Best track center
+plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
+ax = plt.gca()
+ax.set_title(filename)
+ax.set_xlabel('Longitude')

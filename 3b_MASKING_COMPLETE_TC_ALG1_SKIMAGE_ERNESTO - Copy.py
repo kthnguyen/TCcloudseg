@@ -171,7 +171,7 @@ S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
 #%
 C_min_prev_mask_val = np.zeros(DIM_TIME)
 #for C_i in range(0,DIM_TIME):
-for C_i in range(0,1):
+for C_i in range(200,201):
     
     #% Acquire BT images
     C_label_TC[C_i,:,:] = np.zeros([DIM_LAT,DIM_LON])
@@ -199,7 +199,7 @@ for C_i in range(0,1):
     C_flag = C_label_TC[C_i,:,:][:]
     C_flag = np.zeros([DIM_LAT,DIM_LON])
     # first image
-    if C_i == 0:    
+    if C_i > 0:    
         
         box_i_w = [i_w for i_w,x_w in enumerate(C_lon) if abs(I_lon[C_i]-x_w) < S_BOUND_DEG]
         box_i_h = [i_h for i_h,x_h in enumerate(C_lat) if abs(I_lat[C_i]-x_h) < S_BOUND_DEG]
@@ -210,7 +210,7 @@ for C_i in range(0,1):
                 t_lat = C_lat[i_h]
                 t_lon = C_lon[i_w]
                 t_btemp = C_BTemp[i_h,i_w]
-                if (calcdistance_km(I_lat[C_i], I_lon[C_i], t_lat, t_lon) <S_BOUND_KM) and (np.int(t_btemp)) < 200:
+                if (calcdistance_km(I_lat[C_i], I_lon[C_i], t_lat, t_lon) <S_BOUND_KM) and (np.int(t_btemp)) < 230:
                     C_flag[i_h,i_w] = 1
                     print ('found at ' + str(i_w) + ' and ' + str(i_h))
     # starting from the second image
@@ -241,7 +241,7 @@ for C_i in range(0,1):
         print("Previous mask min at value " + str(min_prv_mask_val) + " K")
     C_Core = C_flag[:]    
     
-    #% Start spreading
+    #%% Start spreading
     C_binary = np.where(C_BTemp>280,0,C_BTemp)
     C_binary = np.where(C_binary>1,1,C_binary)
     C_binary8 = C_binary.astype(np.uint8)
@@ -263,27 +263,27 @@ for C_i in range(0,1):
     lon_min = np.round(np.min(C_lon),1)
     filename = TC_serial+ "_" + I_name + "_" + time_to_string_with_min(I_year[C_i], I_month[C_i], I_day[C_i], I_hour[C_i], I_minute[C_i])
     
-    plt.subplot(221)
-    #% Plot BT image with 3 labels
+#    plt.subplot(221)
+#    #% Plot BT image with 3 labels
     im = plt.imshow(C_binary8, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys_r',origin='lower')
-    # Best track center
-    plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
-    ax = plt.gca()
-    ax.set_title(filename)
-    ax.set_xlabel('Longitude')
-    
-    plt.subplot(222)
-    #% Plot BT image with 3 labels
-    im = plt.imshow(dist_transform, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys_r',origin='lower')
-    plt.subplot(223)
-    im = plt.imshow(sure_fg, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys_r',origin='lower')
-    plt.subplot(224)
-    C_mask_TC = np.where(C_flag == 0, np.NaN , C_flag)
-    C_mask_Core = np.where(C_Core == 0, np.NaN , C_Core)
-    im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
-    im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
-    im2 = plt.imshow(C_mask_Core, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['green']),origin='lower',alpha=0.3)
-    # Best track center
+#    # Best track center
+#    plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
+#    ax = plt.gca()
+#    ax.set_title(filename)
+#    ax.set_xlabel('Longitude')
+#    
+#    plt.subplot(222)
+#    #% Plot BT image with 3 labels
+#    im = plt.imshow(dist_transform, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys_r',origin='lower')
+#    plt.subplot(223)
+#    im = plt.imshow(sure_fg, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys_r',origin='lower')
+#    plt.subplot(224)
+#    C_mask_TC = np.where(C_flag == 0, np.NaN , C_flag)
+#    C_mask_Core = np.where(C_Core == 0, np.NaN , C_Core)
+#    im = plt.imshow(C_binary8, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys_r',origin='lower')
+#    im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.6)
+#    im2 = plt.imshow(C_mask_Core, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['green']),origin='lower',alpha=0.3)
+#    # Best track center
     plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
     ax = plt.gca()
     ax.set_title(filename)
