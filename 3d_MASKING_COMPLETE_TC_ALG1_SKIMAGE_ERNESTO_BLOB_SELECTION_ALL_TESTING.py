@@ -212,7 +212,7 @@ max_idx_prev = [0,0]
 max_idx_x = []
 max_idx_y = []
 #%%
-for C_i in range(0,DIM_TIME):   
+for C_i in range(183,DIM_TIME):   
 #for C_i in range(1,2):
     start_time_Ci = time.time()
     #% Acquire BT images
