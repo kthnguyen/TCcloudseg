@@ -23,16 +23,18 @@ from scipy import signal
 import scipy
 from skimage.future import graph
 import networkx as nx
-
+import pickle
+import skimage.io as io
+from PIL import Image, ImageEnhance
 WORKPLACE = r"C:\Users\z3439910\Documents\Kien\1_Projects\2_Msc\1_E1\5_GIS_project"
 IRDIR = WORKPLACE + r"\IRimages2012"
-SAVDIR = WORKPLACE + r"\3_Figures\ERNESTO"
+SAVDIR = WORKPLACE + r"\3_Figures\ERNESTO_2"
 BTDIR = WORKPLACE + r"\2_IBTrACSfiles"
 os.chdir(IRDIR)
 #%% Get idices in accordance with brightness temperature images
 IMAG_RES = 4 #km
 DEG_TO_KM = 111 #ratio
-LAT_BOUND = [0,60] #NA Basin
+LAT_BOUND = [-20,60] #NA Basin
 LON_BOUND = [-120,0] #NA Basin
 
 #%% Functions
@@ -91,8 +93,6 @@ def time_to_string_without_min(iyear, imonth, iday, ihour):
 #%
 def get_BTempimage_bound(latmin,latmax,lonmin,lonmax):
     BTempimage = xr.open_dataset(WORKPLACE+ "\IRimages2012\merg_2012080100_4km-pixel.nc4")
-    latmin = 0
-    latmax = 60
     BTemp_lat = BTempimage['lat'].values[:]
     BTemp_lon = BTempimage['lon'].values
     lat_bound = [i for i,val in enumerate(BTemp_lat) if (val>latmin and val<latmax)]   
@@ -134,7 +134,7 @@ def make_graph(grid):
               vertices[x/num_vertices]] for x in edges] 
  
     return vertices, edges
-#%%
+#%
 DIM_BOUND = get_BTempimage_bound(LAT_BOUND[0],LAT_BOUND[1],LON_BOUND[0],LON_BOUND[1])#incices from BT images
 
 #%% Best track for a particular storm based on its serial
@@ -210,9 +210,16 @@ S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
 
 #%
 C_min_prev_mask_val = np.zeros(DIM_TIME)
-#for C_i in range(0,DIM_TIME):
-for C_i in range(200,201):
-    
+max_idx_prev = [0,0]
+max_idx_x = []
+max_idx_y = []
+#%%
+max_idx_x = pickle.load(open(SAVDIR + r"\max_idx_x.p","rb"))
+max_idx_y = pickle.load(open(SAVDIR + r"\max_idx_y.p","rb"))
+#%%
+#for C_i in range(0,DIM_TIME):   
+for C_i in range(126,127):
+    start_time_Ci = time.time()
     #% Acquire BT images
     C_label_TC[C_i,:,:] = np.zeros([DIM_LAT,DIM_LON])
     BTemp_filename = r"merg_"+ time_to_string_without_min(I_year[C_i],I_month[C_i],I_day[C_i],I_hour[C_i]) + r"_4km-pixel.nc4"
@@ -239,7 +246,7 @@ for C_i in range(200,201):
     C_flag = C_label_TC[C_i,:,:][:]
     C_flag = np.zeros([DIM_LAT,DIM_LON])
     # first image
-    if C_i > 0:    
+    if C_i == 0:    
         
         box_i_w = [i_w for i_w,x_w in enumerate(C_lon) if abs(I_lon[C_i]-x_w) < S_BOUND_DEG]
         box_i_h = [i_h for i_h,x_h in enumerate(C_lat) if abs(I_lat[C_i]-x_h) < S_BOUND_DEG]
@@ -255,58 +262,33 @@ for C_i in range(200,201):
                     print ('found at ' + str(i_w) + ' and ' + str(i_h))
     # starting from the second image
     else:
-        C_flag_prev = C_label_TC[C_i-1,:,:][:]
-        idx_prv = np.where(C_flag_prev == 2)
-        idx_prv_y = idx_prv[0]
-        idx_prv_x = idx_prv[1]
-        min_prv_mask_val = 9999
-        min_prv_mask_idx = 0
-        min_prv_mask_idy = 0
-        for i in range(0,np.shape(idx_prv)[1]-1):
-            if (min_prv_mask_val > C_BTemp[idx_prv_y[i],idx_prv_x[i]]) and (calcdistance_km(I_lat[C_i], I_lon[C_i], C_lat[idx_prv_y[i]], C_lon[idx_prv_x[i]])<200):
-                min_prv_mask_val  = C_BTemp[idx_prv_y[i],idx_prv_x[i]]
-                min_prv_mask_idx = idx_prv_x[i]
-                min_prv_mask_idy = idx_prv_y[i]
-    
-        C_min_prev_mask_val[C_i] =  min_prv_mask_val
-        C_flag[min_prv_mask_idy,min_prv_mask_idx] = 1
-        C_flag[min_prv_mask_idy,min_prv_mask_idx+1] = 1
-        C_flag[min_prv_mask_idy,min_prv_mask_idx-1] = 1
-        C_flag[min_prv_mask_idy+1,min_prv_mask_idx] = 1
-        C_flag[min_prv_mask_idy-1,min_prv_mask_idx] = 1
-        C_flag[min_prv_mask_idy,min_prv_mask_idx+2] = 1
-        C_flag[min_prv_mask_idy,min_prv_mask_idx-2] = 1
-        C_flag[min_prv_mask_idy+2,min_prv_mask_idx] = 1
-        C_flag[min_prv_mask_idy-2,min_prv_mask_idx] = 1
-        print("Previous mask min at value " + str(min_prv_mask_val) + " K")
+        max_idx_prev = [np.int(max_idx_x[C_i]),np.int(max_idx_y[C_i])]
+        C_BTemp[max_idx_prev[0]-5:max_idx_prev[0]+5,max_idx_prev[1]-5:max_idx_prev[1]+5]
+        C_flag[max_idx_prev[0]-5:max_idx_prev[0]+5,max_idx_prev[1]-5:max_idx_prev[1]+5] = C_BTemp[max_idx_prev[0]-5:max_idx_prev[0]+5,max_idx_prev[1]-5:max_idx_prev[1]+5]
+        C_flag = np.where(C_flag>280,0,C_flag)
     C_Core = C_flag[:]    
     
     #%% Start spreading
     #% First round, sepearate the connect blobs relating to the cyclone
+    ##################################################################
+    I_idx = get_coord_to_idx(I_lat[C_i],I_lon[C_i])
     C_binary = np.where(C_BTemp>280,0,C_BTemp)
     C_binary = np.where(C_binary>1,1,C_binary)
-    C_binary8 = C_binary.astype(np.uint8)
+    C_binary_cut = np.zeros([DIM_LAT,DIM_LON])
+    r = 500
+    C_binary_cut[I_idx[0]-r:I_idx[0]+r,I_idx[1]-r:I_idx[1]+r] = C_binary[I_idx[0]-r:I_idx[0]+r,I_idx[1]-r:I_idx[1]+r] 
+    C_binary8 = C_binary_cut.astype(np.uint8)
     
     
-    
-    I_idx = get_coord_to_idx(I_lat[C_i],I_lon[C_i])
     kernel = np.ones((3,3),np.uint8)
     opening = cv2.morphologyEx(C_binary8,cv2.MORPH_OPEN,kernel, iterations = 2)
     dist_transform = cv2.distanceTransform(opening,cv2.DIST_L2,0)
-    
-#    dist_matrix = dist_transform[I_idx[0]-100:I_idx[0]+100,I_idx[1]-100:I_idx[1]+100]
-#    dist_max = np.unravel_index(np.argmax(dist_matrix, axis=None), dist_matrix.shape)
-#    dist_max_big = [I_idx[0]-100 + dist_max[0],I_idx[1] - 100 + dist_max[1]]
-#    markers_one = np.zeros([DIM_LAT,DIM_LON])
-#    markers_one[dist_max_big[0],dist_max_big[1]] = 1
-   
-    
-#    dist_transform_mod = np.where(dist_transform<20,0,dist_transform)
     labels_ws = watershed(-dist_transform, C_flag, mask=C_binary8)
     
     C_binary8_second = np.where(labels_ws>0, C_binary8, 0)
  
     #%% Second round - divide the previous mask into blobs
+    ##################################################################
     seed = np.copy(C_binary8_second)
     seed[1:-1, 1:-1] = C_binary8_second.max()
     mask = C_binary8_second
@@ -326,24 +308,28 @@ for C_i in range(200,201):
         min_distance_val +=1
         if np.int(np.shape(maximum_coordinates)[0]) < 15:
             flag = 1
+            
     markers_two = np.zeros([DIM_LAT,DIM_LON])
     for i in range(0,np.shape(maximum_coordinates)[0]-1):
         markers_two[maximum_coordinates[i,0],maximum_coordinates[i,1]] = dist_transform_second[maximum_coordinates[i,0],maximum_coordinates[i,1]]
-#    C_flag = np.where(labels_ws==1,2,labels_ws)
     
-    labels_ws_second = watershed(-dist_transform_second, markers_two, mask=C_binary8_second,watershed_line=True)
+    labels_ws_second = watershed(-dist_transform_second, markers_two, mask=C_binary8_second,watershed_line=False)
     blobs_labels = measure.label(labels_ws_second,neighbors=4, background=0)
     
     #%% Third round - Decide which blobs to count
+    ##################################################################
     # set a bounding box around BT center, then take the max pixel
     box_from_BTcenter = dist_transform_second[I_idx[0]-100:I_idx[0]+100,I_idx[1]-100:I_idx[1]+100]
     max_idx_from_box = np.unravel_index(np.argmax(box_from_BTcenter, axis=None), box_from_BTcenter.shape) #idx within box
     max_idx  = [I_idx[0]-100 + max_idx_from_box[0],I_idx[1] - 100 + max_idx_from_box[1]] #idx in the image
-    
+    max_idx_prev = max_idx
+    max_idx_x = np.append(max_idx_x, max_idx[0])
+    max_idx_y = np.append(max_idx_y, max_idx[1])
     # flag the whole blob that contains the max pixel
-    C_flag = np.where(blobs_labels==blobs_labels[max_idx[0],max_idx[1]],1,0)
+    #    C_prev_blob = np.where(blobs_labels==blobs_labels[max_idx[0],max_idx[1]],1,0)
     
     #%% Create a graph of labelled regions
+    ########################
     label_graph = nx.Graph()
     # hash for later unique results in convolution
     blobs_labels_hash = blobs_labels**2+1
@@ -363,19 +349,17 @@ for C_i in range(200,201):
     #% add weight and info to the graph
     for xi in unique_labels:
         for yi in unique_labels:
-#    xi = 4**2 + 1
-#    yi = 5**2 + 1
             if yi>xi:
-                kernel_xy = np.array([xi,0,yi]).reshape(3,1)
+                kernel_xy = np.array([xi,yi]).reshape(2,1)
                 results1 = scipy.signal.convolve2d(blobs_labels_hash,kernel_xy,mode = 'same')
         
-                kernel_xy = np.array([xi,0,yi]).reshape(1,3)
+                kernel_xy = np.array([xi,yi]).reshape(1,2)
                 results2 = scipy.signal.convolve2d(blobs_labels_hash,kernel_xy,mode = 'same')
                 
-                kernel_xy = np.array([yi,0,xi]).reshape(3,1)
+                kernel_xy = np.array([yi,xi]).reshape(2,1)
                 results3 = scipy.signal.convolve2d(blobs_labels_hash,kernel_xy,mode = 'same')
         
-                kernel_xy = np.array([yi,0,xi]).reshape(1,3)
+                kernel_xy = np.array([yi,xi]).reshape(1,2)
                 results4 = scipy.signal.convolve2d(blobs_labels_hash,kernel_xy,mode = 'same')
                  
                 results1 = np.where(results1 == (xi**2 + yi**2), results1,0)
@@ -394,13 +378,17 @@ for C_i in range(200,201):
                     label_graph.nodes[yi]['neighbors'] = np.append(label_graph.nodes[yi]['neighbors'],[xi])
     
     #%% Blob selection algorithm, starting from the centre blob  
+    ########################
     label_ct = blobs_labels_hash[max_idx[0],max_idx[1]]  
     label_chosen = np.array([label_ct])
     label_chosen_volume = label_graph.nodes[label_ct]['volume']
     # round 1: only adj to the centre
     for label_i in unique_labels:
-        if label_i != label_ct and label_i != 1:            
-            if (label_graph[label_i][label_ct]['border'] > 0) and (label_graph.nodes[label_i]['volume'] < label_graph.nodes[label_ct]['volume']*0.8):
+        if label_i != label_ct and label_i != 1:        
+            if (label_graph[label_i][label_ct]['border'] > 0) and (np.shape(label_graph.node[label_i]['neighbors'])[0] ==2 ) and (label_graph.nodes[label_i]['volume'] < label_graph.nodes[label_ct]['volume'] *0.5):
+                label_chosen = np.append(label_chosen,[label_i])
+                label_chosen_volume += label_graph.nodes[label_i]['volume']
+            elif (label_graph[label_i][label_ct]['border'] > 10) and (label_graph.nodes[label_i]['volume'] < label_graph.nodes[label_ct]['volume']*1.5):
                 label_chosen = np.append(label_chosen,[label_i])
                 label_chosen_volume += label_graph.nodes[label_i]['volume']
     
@@ -411,7 +399,10 @@ for C_i in range(200,201):
         if np.count_nonzero(label_chosen==label_i) == 0 and label_i != 1:
             # only go through all blobs from the previous round and not the centre blob, and only compare with the previous volume
             for label_chosen_i in label_chosen[1:label_chosen_size]:
-                if (label_graph[label_i][label_chosen_i]['border'] > 0) and (label_graph.nodes[label_i]['volume'] < label_chosen_volume_prv *0.8):
+                if (label_graph[label_i][label_chosen_i]['border'] > 0) and (np.shape(label_graph.node[label_i]['neighbors'])[0] ==2 ) and (label_graph.nodes[label_i]['volume'] < label_chosen_volume_prv *0.5):
+                    label_chosen = np.append(label_chosen,[label_i])
+                    label_chosen_volume += label_graph.nodes[label_i]['volume']
+                elif (label_graph[label_i][label_chosen_i]['border'] > 10) and (label_graph.nodes[label_i]['volume'] < label_chosen_volume_prv *0.8):
                     label_chosen = np.append(label_chosen,[label_i])
                     label_chosen_volume += label_graph.nodes[label_i]['volume']
                     
@@ -422,10 +413,13 @@ for C_i in range(200,201):
         if np.count_nonzero(label_chosen==label_i) == 0 and label_i != 1:
             # only go through all blobs from the previous round and not the centre blob, and only compare with the previous volume
             for label_chosen_i in label_chosen[1:label_chosen_size]:
-                if (label_graph[label_i][label_chosen_i]['border'] > 0) and (label_graph.nodes[label_i]['volume'] < label_chosen_volume_prv *0.3):
+                if (label_graph[label_i][label_chosen_i]['border'] > 0) and (np.shape(label_graph.node[label_i]['neighbors'])[0] ==2 ) and (label_graph.nodes[label_i]['volume'] < label_chosen_volume_prv *0.5):
                     label_chosen = np.append(label_chosen,[label_i])
                     label_chosen_volume += label_graph.nodes[label_i]['volume']
-                    
+                elif (label_graph[label_i][label_chosen_i]['border'] > 10) and (label_graph.nodes[label_i]['volume'] < label_chosen_volume_prv *0.8):
+                    label_chosen = np.append(label_chosen,[label_i])
+                    label_chosen_volume += label_graph.nodes[label_i]['volume']
+     #%           
     # round 4: adj to the chosen blobs - only take single blob - lower the volume ratio to 0.2
     label_chosen_size = np.shape(label_chosen)[0]
     label_chosen_volume_prv = np.copy(label_chosen_volume)
@@ -433,10 +427,53 @@ for C_i in range(200,201):
         if np.count_nonzero(label_chosen==label_i) == 0 and label_i != 1:
             # only go through all blobs from the previous round and not the centre blob, and only compare with the previous volume
             for label_chosen_i in label_chosen[1:label_chosen_size]:
-                if (label_graph[label_i][label_chosen_i]['border'] > 0) and (np.shape(label_graph.nodes[label_i]['neighbors'])[0]==2) and (label_graph.nodes[label_i]['volume'] < label_chosen_volume_prv *0.3):
+                if (label_graph[label_i][label_chosen_i]['border'] > 0) and (np.shape(label_graph.node[label_i]['neighbors'])[0] ==2 ) and (label_graph.nodes[label_i]['volume'] < label_chosen_volume_prv *0.3):
                     label_chosen = np.append(label_chosen,[label_i])
                     label_chosen_volume += label_graph.nodes[label_i]['volume']
-#%%
+                elif (label_graph[label_i][label_chosen_i]['border'] > 10) and (label_graph.nodes[label_i]['volume'] < label_chosen_volume_prv *0.5):
+                    label_chosen = np.append(label_chosen,[label_i])
+                    label_chosen_volume += label_graph.nodes[label_i]['volume']
+    # round 5: adj to the chosen blobs - only take single blob - lower the volume ratio to 0.2
+    label_chosen_size = np.shape(label_chosen)[0]
+    label_chosen_volume_prv = np.copy(label_chosen_volume)
+    for label_i in unique_labels:        
+        if np.count_nonzero(label_chosen==label_i) == 0 and label_i != 1:
+            # only go through all blobs from the previous round and not the centre blob, and only compare with the previous volume
+            for label_chosen_i in label_chosen[1:label_chosen_size]:
+                if (label_graph[label_i][label_chosen_i]['border'] > 0) and (np.shape(label_graph.node[label_i]['neighbors'])[0] ==2 ) and (label_graph.nodes[label_i]['volume'] < label_chosen_volume_prv *0.3):
+                    label_chosen = np.append(label_chosen,[label_i])
+                    label_chosen_volume += label_graph.nodes[label_i]['volume']
+                elif (label_graph[label_i][label_chosen_i]['border'] > 10) and (label_graph.nodes[label_i]['volume'] < label_chosen_volume_prv *0.3):
+                    label_chosen = np.append(label_chosen,[label_i])
+                    label_chosen_volume += label_graph.nodes[label_i]['volume']
+    
+    #% Select chosen labels and creat C_flag
+    C_flag = np.zeros([DIM_LAT,DIM_LON])
+    for label in label_chosen:
+        label_unhash = np.sqrt(label-1)
+        C_flag = np.where(blobs_labels==label_unhash,2,C_flag)
+    
+    #% Amend the HDF database
+    C_label_TC[C_i,:,:] = C_flag    
+    #%
+    C_flag_BG = np.where(C_BTemp<280,0,C_BTemp)
+    C_flag_BG = np.where(C_flag_BG>0,4,C_flag_BG)
+    C_flag_nonTC = np.zeros([DIM_LAT,DIM_LON])
+    C_flag_nonTC = np.where(C_flag_BG < 4,3,C_flag_nonTC)
+    C_flag_nonTC = np.where(C_flag >0,0,C_flag_nonTC)
+    #im2 = plt.imshow(a, cmap='Greys',origin='lower',alpha=0.4)
+    
+    C_label_TC[C_i,:,:] = C_flag #flag=2
+    C_label_nonTC[C_i,:,:] = C_flag_nonTC #flag=3
+    C_label_BG[C_i,:,:] = C_flag_BG #flag=4
+    
+    
+    #mask_pos = np.where(c_mask>0)
+    #c_Tb = Cdataset.Tb[C_i,:,:].values
+    
+#%% Plot all figures
+##################################################################
+#% Plot stat images with 4 subfigures
     fig = plt.figure()
     lat_max = np.round(np.max(C_lat),1)
     lat_min = np.round(np.min(C_lat),1)
@@ -444,97 +481,130 @@ for C_i in range(200,201):
     lon_min = np.round(np.min(C_lon),1)
     filename = TC_serial+ "_" + I_name + "_" + time_to_string_with_min(I_year[C_i], I_month[C_i], I_day[C_i], I_hour[C_i], I_minute[C_i])
     
-    plt.subplot(221)
-    #% Plot BT image with 3 labels
-#    C_mask_TC = np.where(C_flag == 0, np.NaN , C_flag)
-    im = plt.imshow(C_binary8_second, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys_r',origin='lower')
-#    im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.6)
+    plt.subplot(221) #binary images
+    im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
     # Best track center
     plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
     ax = plt.gca()
     ax.set_title(filename)
     ax.set_xlabel('Longitude')
+    ax.set_ylabel('Latitude')
     
-    plt.subplot(222)
-    #% Plot BT image with 3 labels
-    im = plt.imshow(C_binary8_filled, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys_r',origin='lower')
-    plt.subplot(223)
-    im = plt.imshow(maximum_fil_result,  cmap=plt.cm.nipy_spectral, interpolation='nearest',origin='lower')
-
-    plt.plot(coordinates[:, 1], coordinates[:, 0], 'r.')
-    plt.subplot(224)
-    im = plt.imshow(blobs_labels,  cmap=plt.cm.nipy_spectral, interpolation='nearest',origin='lower')
-#    C_mask_TC = np.where(C_flag == 0, np.NaN , C_flag)
-#    C_mask_Core = np.where(C_Core == 0, np.NaN , C_Core)
-#    im = plt.imshow(C_binary8, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys_r',origin='lower')
-#    im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.6)
-#    im2 = plt.imshow(C_mask_Core, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['green']),origin='lower',alpha=0.3)
-    # Best track center
-#    plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
+    plt.subplot(222) #with holes filled
+    im = plt.imshow(C_binary_cut, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys_r',origin='lower')
+    ax.set_title(filename)
+    ax.set_xlabel('Longitude')
+    ax.set_ylabel('Latitude')
+    
+    plt.subplot(223) #max map
+    im = plt.imshow(maximum_fil_result, cmap=plt.cm.nipy_spectral, interpolation='nearest',origin='lower')
+    plt.plot(maximum_coordinates[:, 1], maximum_coordinates[:, 0], 'r.')
+    ax.set_title(filename)
+    ax.set_xlabel('Longitude')
+    ax.set_ylabel('Latitude')
+    
+    plt.subplot(224) #blob regions
+    im = plt.imshow(blobs_labels, extent = (lon_min, lon_max, lat_min, lat_max), cmap=plt.cm.nipy_spectral, interpolation='nearest',origin='lower')
     ax = plt.gca()
     ax.set_title(filename)
     ax.set_xlabel('Longitude')
     ax.set_ylabel('Latitude')
     
     
-    ax.set_ylabel('Latitude')
+#    fig.savefig(SAVDIR + "\\" + "stat_" + filename +".png",dpi=400)
+#    plt.close()
     plt.show()    
 
-
-    #%%
-#    C_label_TC[C_i,:,:] = C_flag    
-#    #%
-#    C_flag_BG = np.where(C_BTemp<280,0,C_BTemp)
-#    C_flag_BG = np.where(C_flag_BG>0,4,C_flag_BG)
-#    C_flag_nonTC = np.zeros([DIM_LAT,DIM_LON])
-#    C_flag_nonTC = np.where(C_flag_BG < 4,3,C_flag_nonTC)
-#    C_flag_nonTC = np.where(C_flag >0,0,C_flag_nonTC)
-#    #im2 = plt.imshow(a, cmap='Greys',origin='lower',alpha=0.4)
-#    
-#    C_label_TC[C_i,:,:] = C_flag #flag=2
-#    C_label_nonTC[C_i,:,:] = C_flag_nonTC #flag=3
-#    C_label_BG[C_i,:,:] = C_flag_BG #flag=4
-#    
-#    #% Plot image
-#    #flag_pos = np.where(c_flag==1)
-#    C_mask_TC = np.where(C_flag == 0, np.NaN , C_flag)
-#    C_mask_nonTC = np.where(C_flag_nonTC == 0, np.NaN , C_flag_nonTC)
-#    C_mask_BG = np.where(C_flag_BG == 0, np.NaN , C_flag_BG)
-#    #mask_pos = np.where(c_mask>0)
-#    #c_Tb = Cdataset.Tb[C_i,:,:].values
-#    
-#    
-#    #% plot IR image and the center point
-#    fig = plt.figure()
-#    lat_max = np.round(np.max(C_lat),1)
-#    lat_min = np.round(np.min(C_lat),1)
-#    lon_max = np.round(np.max(C_lon),1)
-#    lon_min = np.round(np.min(C_lon),1)
-#    filename = TC_serial+ "_" + I_name + "_" + time_to_string_with_min(I_year[C_i], I_month[C_i], I_day[C_i], I_hour[C_i], I_minute[C_i])
-#    
-#    #% Plot BT image with 3 labels
-#    im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
-#    im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
-#    im3 = plt.imshow(C_mask_nonTC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['red']),origin='lower',alpha=0.3)
-#    im4 = plt.imshow(C_mask_BG, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['blue']),origin='lower',alpha=0.3)
-#    
-#    # Best track center
-#    plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
-#    
-#    # Previous core position
-#    if C_i>0:
-#        plt.plot(C_lon[min_prv_mask_idx],C_lat[min_prv_mask_idy],'co', markersize = 2)
-#        
-#    ax = plt.gca()
-#    ax.set_title(filename)
-#    ax.set_xlabel('Longitude')
-#    ax.set_ylabel('Latitude')
-#    fig.savefig(SAVDIR + "\\" + filename +".png",dpi=1000)
+#%% plot IR image and the center point
+    fig = plt.figure()
+    lat_max = np.round(np.max(C_lat),1)
+    lat_min = np.round(np.min(C_lat),1)
+    lon_max = np.round(np.max(C_lon),1)
+    lon_min = np.round(np.min(C_lon),1)
+    filename = TC_serial+ "_" + I_name + "_" + time_to_string_with_min(I_year[C_i], I_month[C_i], I_day[C_i], I_hour[C_i], I_minute[C_i])
+    
+    C_mask_TC = np.where(C_flag == 0, np.NaN , C_flag)
+    C_mask_nonTC = np.where(C_flag_nonTC == 0, np.NaN , C_flag_nonTC)
+    C_mask_BG = np.where(C_flag_BG == 0, np.NaN , C_flag_BG)
+    
+    #% Plot BT image with 3 labels
+    im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
+    im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
+    im3 = plt.imshow(C_mask_nonTC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['red']),origin='lower',alpha=0.3)
+    im4 = plt.imshow(C_mask_BG, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['blue']),origin='lower',alpha=0.3)
+    
+    # Best track center
+    plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
+    
+    # Previous core position
+    C_mask_Core = np.where(C_Core == 0, np.NaN , C_Core)
+    im4 = plt.imshow(C_mask_Core, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['green']),origin='lower',alpha=0.3)
+   
+        
+    ax = plt.gca()
+    ax.set_title(filename)
+    ax.set_xlabel('Longitude')
+    ax.set_ylabel('Latitude')
+#    fig.savefig(SAVDIR + "\\" + "f_"+ filename +".png",dpi=400)
 #    plt.close()
-##    plt.show()            
-#
-#    elapsed_time_overall = time.time() - start_time_overall
-#    print ('Cloud extraction for all done in ' +  time.strftime("%H:%M:%S", time.gmtime(elapsed_time_overall)))
-#
-##% CLOSE HDF5 FILES
-#Hfile_label.close()
+    plt.show()            
+    
+    elapsed_time_Ci = time.time() - start_time_Ci
+    print ('Cloud extraction for '+ filename + ' done in '+  time.strftime("%H:%M:%S", time.gmtime(elapsed_time_Ci)))
+#%%
+elapsed_time_overall = time.time() - start_time_overall
+print ('Cloud extraction for all done in ' +  time.strftime("%H:%M:%S", time.gmtime(elapsed_time_overall)))
+
+#%% CLOSE HDF5 FILES
+Hfile_label.close()
+#%%
+fig = plt.figure()
+im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
+fig.savefig(WORKPLACE + "\\" + filename +".png",dpi=400)
+plt.close()
+#%% SAVE MASK
+R_channel = np.flipud(np.where(C_flag == 0, 0 , 255))
+A_channel = np.where(C_flag == 0, 255 , 255)
+image_shape = np.shape(C_flag)
+png_array = np.zeros(shape=[image_shape[0],image_shape[1],4],dtype=np.uint8)
+png_array[:,:,0] = R_channel
+png_array[:,:,1] = R_channel
+png_array[:,:,2] = R_channel
+png_array[:,:,3] = A_channel
+io.imsave(WORKPLACE+ r'\mask.png', png_array)
+#%%
+R_channel = np.flipud(np.where(C_binary == 0, 0 , 255))
+A_channel = np.where(C_binary == 0, 255 , 255)
+image_shape = np.shape(C_flag)
+png_array = np.zeros(shape=[image_shape[0],image_shape[1],4],dtype=np.uint8)
+png_array[:,:,0] = R_channel
+png_array[:,:,1] = R_channel
+png_array[:,:,2] = R_channel
+png_array[:,:,3] = A_channel
+io.imsave(WORKPLACE+ r'\mask_big.png', png_array)
+#%%
+C_BTemp_nor = np.flipud(C_BTemp/max(C_BTemp.flatten()))
+cm = plt.get_cmap('Greys')
+C_BTemp_nor_cm = cm(C_BTemp_nor)
+C_BTemp_nor_cm = np.uint8(C_BTemp_nor_cm * 255)
+im = Image.fromarray(C_BTemp_nor_cm)
+enhancer = ImageEnhance.Brightness(im)
+im2 = enhancer.enhance(2.5)
+im2.save(WORKPLACE + r"\image.png")
+
+#%%
+im_frame = Image.open(WORKPLACE + r"\mask.png")
+im = plt.imshow(im_frame)
+plt.show()
+
+im_frame2 = Image.open(WORKPLACE + r"\image.png")
+im2 = plt.imshow(im_frame2)
+plt.show()
+#%%
+mask_in = np.flipud(np.where(C_flag == 0, 0, 1))
+mask_in = mask_in.astype(np.uint8)
+pickle.dump(mask_in, open(WORKPLACE+r"\mask_in.p","wb"))
+#%%
+fig = plt.figure()
+im = plt.imshow(mask_in)
+plt.show()
