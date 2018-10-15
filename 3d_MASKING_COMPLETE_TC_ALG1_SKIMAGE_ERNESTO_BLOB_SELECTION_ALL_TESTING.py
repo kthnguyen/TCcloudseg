@@ -262,7 +262,7 @@ for C_i in range(183,DIM_TIME):
         C_flag = np.where(C_flag>280,0,C_flag)
     C_Core = C_flag[:]    
     
-    #% Start spreading
+    #%% Start spreading
     #% First round, sepearate the connect blobs relating to the cyclone
     ##################################################################
     I_idx = get_coord_to_idx(I_lat[C_i],I_lon[C_i])
@@ -275,13 +275,13 @@ for C_i in range(183,DIM_TIME):
     
     
     kernel = np.ones((3,3),np.uint8)
-    opening = cv2.morphologyEx(C_binary8,cv2.MORPH_OPEN,kernel, iterations = 2)
+    opening = cv2.morphologyEx(C_binary8,cv2.MORPH_OPEN, kernel, iterations = 2)
     dist_transform = cv2.distanceTransform(opening,cv2.DIST_L2,0)
     labels_ws = watershed(-dist_transform, C_flag, mask=C_binary8)
     
     C_binary8_second = np.where(labels_ws>0, C_binary8, 0)
  
-    #% Second round - divide the previous mask into blobs
+    #%% Second round - divide the previous mask into blobs
     ##################################################################
     seed = np.copy(C_binary8_second)
     seed[1:-1, 1:-1] = C_binary8_second.max()
@@ -310,7 +310,7 @@ for C_i in range(183,DIM_TIME):
     labels_ws_second = watershed(-dist_transform_second, markers_two, mask=C_binary8_second,watershed_line=False)
     blobs_labels = measure.label(labels_ws_second,neighbors=4, background=0)
     
-    #% Third round - Decide which blobs to count
+    #%% Third round - Decide which blobs to count
     ##################################################################
     # set a bounding box around BT center, then take the max pixel
     box_from_BTcenter = dist_transform_second[I_idx[0]-100:I_idx[0]+100,I_idx[1]-100:I_idx[1]+100]
@@ -371,7 +371,7 @@ for C_i in range(183,DIM_TIME):
                 if xi > 1 and yi > 1  and occurences>0 and (np.count_nonzero(label_graph.nodes[yi]['neighbors'] == xi) == 0):
                     label_graph.nodes[yi]['neighbors'] = np.append(label_graph.nodes[yi]['neighbors'],[xi])
     
-    #% Blob selection algorithm, starting from the centre blob  
+    #%% Blob selection algorithm, starting from the centre blob  
     ########################
     label_ct = blobs_labels_hash[max_idx[0],max_idx[1]]  
     label_chosen = np.array([label_ct])
@@ -465,7 +465,7 @@ for C_i in range(183,DIM_TIME):
     #mask_pos = np.where(c_mask>0)
     #c_Tb = Cdataset.Tb[C_i,:,:].values
     
-#% Plot all figures
+#%% Plot all figures
 ##################################################################
 #% Plot stat images with 4 subfigures
     fig = plt.figure()
@@ -509,7 +509,7 @@ for C_i in range(183,DIM_TIME):
     plt.close()
 #    plt.show()    
 
-#% plot IR image and the center point
+#%% plot IR image and the center point
     fig = plt.figure()
     lat_max = np.round(np.max(C_lat),1)
     lat_min = np.round(np.min(C_lat),1)
@@ -545,8 +545,9 @@ for C_i in range(183,DIM_TIME):
     
     elapsed_time_Ci = time.time() - start_time_Ci
     print ('Cloud extraction for '+ filename + ' done in '+  time.strftime("%H:%M:%S", time.gmtime(elapsed_time_Ci)))
+#%%
 elapsed_time_overall = time.time() - start_time_overall
 print ('Cloud extraction for all done in ' +  time.strftime("%H:%M:%S", time.gmtime(elapsed_time_overall)))
 
-#% CLOSE HDF5 FILES
+#%% CLOSE HDF5 FILES
 Hfile_label.close()

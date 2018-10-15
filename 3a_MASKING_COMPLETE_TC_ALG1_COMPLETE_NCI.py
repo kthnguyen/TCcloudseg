@@ -8,18 +8,18 @@ Created on Sun Aug 19 21:38:08 2018
 import numpy as np
 import xarray as xr
 import pandas as pd
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import time
-from matplotlib import colors
+#from matplotlib import colors
 import h5py
 
 #WORKPLACE = r"C:\Users\z3439910\Documents\Kien\1_Projects\2_Msc\1_E1\5_GIS_project"
-IRDIR = r"/short/xn6/kn663/180821_Trial/"
-SAVDIR = r"/short/xn6/kn663/180821_Trial//Figures/"
-BTDIR = r"/short/xn6/kn663/180821_Trial/"
+IRDIR = r"/short/xn6/kn6663/180821_Trial/"
+SAVDIR = r"/short/xn6/kn6663/180821_Trial/Figures/"
+BTDIR = r"/short/xn6/kn6663/180821_Trial/"
 #os.chdir(IRDIR)
 
-#%% Functions
+#% Functions
 def calcdistance_km(latA,lonA,latB,lonB):
     dist = np.sqrt(np.square(latA-latB)+np.square(lonA-lonB))*111
     return np.int(dist)
@@ -74,7 +74,7 @@ def time_to_string_without_min(iyear, imonth, iday, ihour):
 
 #%
 def get_BTempimage_bound(latmin,latmax,lonmin,lonmax):
-    BTempimage = xr.open_dataset(IRDIR+ "\merg_2012080100_4km-pixel.nc4")
+    BTempimage = xr.open_dataset(IRDIR+ r"merg_2012080100_4km-pixel.nc4")
     latmin = 0
     latmax = 60
     BTemp_lat = BTempimage['lat'].values[:]
@@ -84,16 +84,16 @@ def get_BTempimage_bound(latmin,latmax,lonmin,lonmax):
     lon_bound = [i for i,val in enumerate(BTemp_lon) if (val>lonmin and val<lonmax)]   
     lon_val_bound = [val for i,val in enumerate(BTemp_lon) if (val>lonmin and val<lonmax)] 
     return[lat_bound[0],lat_bound[-1],lon_bound[0],lon_bound[-1]]
-#%% Get idices in accordance with brightness temperature images
+#% Get idices in accordance with brightness temperature images
 IMAG_RES = 4 #km
 DEG_TO_KM = 111 #ratio
 LAT_BOUND = [0,60] #NA Basin
 LON_BOUND = [-120,0] #NA Basin
 DIM_BOUND = get_BTempimage_bound(LAT_BOUND[0],LAT_BOUND[1],LON_BOUND[0],LON_BOUND[1])#incices from BT images
 
-#%% Best track for a particular storm based on its serial
+#% Best track for a particular storm based on its serial
 # get TC estimated centers
-B_tracks = xr.open_dataset(BTDIR+"\\"+"Year.2012.ibtracs_all.v03r10.nc")
+B_tracks = xr.open_dataset(BTDIR+r"Year.2012.ibtracs_all.v03r10.nc")
 
 B_TC_serials = B_tracks['storm_sn'].values
 B_TC_names = B_tracks['name'].values
@@ -128,7 +128,7 @@ I_minute = pd.to_datetime(I_time_interpolate['time'].values).minute
 I_lat = I_time_interpolate['lat']
 I_lon = I_time_interpolate['lon']
 
-#%% Create an HDF5 file to store label for the current storm
+#% Create an HDF5 file to store label for the current storm
 DIM_LAT = DIM_BOUND[1]-DIM_BOUND[0] + 1
 DIM_LON = DIM_BOUND[3]-DIM_BOUND[2] + 1
 DIM_TIME = np.shape(I_time_interpolate['time'])[0]
@@ -143,7 +143,7 @@ Hfile_label.create_dataset('label_BG', shape = (DIM_TIME,DIM_LAT,DIM_LON),chunks
 
 Hfile_label.close()
 
-#%% Start spreading 
+#% Start spreading 
 # open the label HDF5 file
 Hfile_label = h5py.File(IRDIR  + TC_serial + r"_" + I_name + r'_label.h5','r+')  
 C_label_TC = Hfile_label['label_TC']
@@ -173,18 +173,18 @@ for C_i in range(0,DIM_TIME):
     
     if I_minute[C_i] == 0:
         #slice out BT images for the current basin
-        C_BTemp = xr.open_dataset(IRDIR+ "\\" + BTemp_filename)['Tb'].values[0][DIM_BOUND[0]:DIM_BOUND[1]+1,DIM_BOUND[2]:DIM_BOUND[3]+1]
-        C_lat = xr.open_dataset(IRDIR+ "\\" + BTemp_filename)['lat'].values[DIM_BOUND[0]:DIM_BOUND[1]+1]
-        C_lon = xr.open_dataset(IRDIR+ "\\" + BTemp_filename)['lon'].values[DIM_BOUND[2]:DIM_BOUND[3]+1]
+        C_BTemp = xr.open_dataset(IRDIR + BTemp_filename)['Tb'].values[0][DIM_BOUND[0]:DIM_BOUND[1]+1,DIM_BOUND[2]:DIM_BOUND[3]+1]
+        C_lat = xr.open_dataset(IRDIR + BTemp_filename)['lat'].values[DIM_BOUND[0]:DIM_BOUND[1]+1]
+        C_lon = xr.open_dataset(IRDIR + BTemp_filename)['lon'].values[DIM_BOUND[2]:DIM_BOUND[3]+1]
         #interpolate NaN values in BT images
         mask = np.isnan(C_BTemp)
         C_BTemp[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), C_BTemp[~mask])
       
     elif I_minute[C_i] == 30:
         #slice out BT images for the current basin
-        C_BTemp = xr.open_dataset(IRDIR+ "\\" + BTemp_filename)['Tb'].values[1][DIM_BOUND[0]:DIM_BOUND[1]+1,DIM_BOUND[2]:DIM_BOUND[3]+1]
-        C_lat = xr.open_dataset(IRDIR+ "\\" + BTemp_filename)['lat'].values[DIM_BOUND[0]:DIM_BOUND[1]+1]
-        C_lon = xr.open_dataset(IRDIR+ "\\" + BTemp_filename)['lon'].values[DIM_BOUND[2]:DIM_BOUND[3]+1]
+        C_BTemp = xr.open_dataset(IRDIR + BTemp_filename)['Tb'].values[1][DIM_BOUND[0]:DIM_BOUND[1]+1,DIM_BOUND[2]:DIM_BOUND[3]+1]
+        C_lat = xr.open_dataset(IRDIR + BTemp_filename)['lat'].values[DIM_BOUND[0]:DIM_BOUND[1]+1]
+        C_lon = xr.open_dataset(IRDIR + BTemp_filename)['lon'].values[DIM_BOUND[2]:DIM_BOUND[3]+1]
         #interpolate NaN values in BT images
         mask = np.isnan(C_BTemp)
         C_BTemp[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), C_BTemp[~mask])
@@ -206,7 +206,7 @@ for C_i in range(0,DIM_TIME):
                 t_btemp = C_BTemp[i_h,i_w]
                 if (calcdistance_km(I_lat[C_i], I_lon[C_i], t_lat, t_lon) <S_BOUND_KM) and (np.int(t_btemp)) < 200:
                     C_flag[i_h,i_w] = 1
-                    print ('found at ' + str(i_w) + ' and ' + str(i_h))
+#                    print ('found at ' + str(i_w) + ' and ' + str(i_h))
     # starting from the second image
     else:
         C_flag_prev = C_label_TC[C_i-1,:,:][:]
@@ -232,7 +232,7 @@ for C_i in range(0,DIM_TIME):
         C_flag[min_prv_mask_idy,min_prv_mask_idx-2] = 1
         C_flag[min_prv_mask_idy+2,min_prv_mask_idx] = 1
         C_flag[min_prv_mask_idy-2,min_prv_mask_idx] = 1
-        print("Previous mask min at value " + str(min_prv_mask_val) + " K")
+#        print("Previous mask min at value " + str(min_prv_mask_val) + " K")
     
     #% Start spreading
     stop_flag = 0
@@ -273,7 +273,7 @@ for C_i in range(0,DIM_TIME):
                                 stop_flag = 0
                         
         elapsed_time_itr = time.time() - start_time_itr
-        print ('Layer ' + str(C_i) + ' Interation ' + str(iteration) + ' done in ' +  time.strftime("%H:%M:%S", time.gmtime(elapsed_time_itr)))
+#        print ('Layer ' + str(C_i) + ' Interation ' + str(iteration) + ' done in ' +  time.strftime("%H:%M:%S", time.gmtime(elapsed_time_itr)))
         iteration = iteration + 1
 
     #%
@@ -300,36 +300,36 @@ for C_i in range(0,DIM_TIME):
     
     
     #% plot IR image and the center point
-    fig = plt.figure()
-    lat_max = np.round(np.max(C_lat),1)
-    lat_min = np.round(np.min(C_lat),1)
-    lon_max = np.round(np.max(C_lon),1)
-    lon_min = np.round(np.min(C_lon),1)
-    filename = TC_serial+ "_" + I_name + "_" + time_to_string_with_min(I_year[C_i], I_month[C_i], I_day[C_i], I_hour[C_i], I_minute[C_i])
-    
-    #% Plot BT image with 3 labels
-    im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
-    im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
-    im3 = plt.imshow(C_mask_nonTC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['red']),origin='lower',alpha=0.3)
-    im4 = plt.imshow(C_mask_BG, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['blue']),origin='lower',alpha=0.3)
-    
-    # Best track center
-    plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
-    
-    # Previous core position
-    if C_i>0:
-        plt.plot(C_lon[min_prv_mask_idx],C_lat[min_prv_mask_idy],'co', markersize = 2)
-        
-    ax = plt.gca()
-    ax.set_title(filename)
-    ax.set_xlabel('Longitude')
-    ax.set_ylabel('Latitude')
-    fig.savefig(SAVDIR + "\\" + filename +".png",dpi=1000)
-    plt.close()
-#    plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2)            
-
-    elapsed_time_overall = time.time() - start_time_overall
-    print ('Cloud extraction for all done in ' +  time.strftime("%H:%M:%S", time.gmtime(elapsed_time_overall)))
+#    fig = plt.figure()
+#    lat_max = np.round(np.max(C_lat),1)
+#    lat_min = np.round(np.min(C_lat),1)
+#    lon_max = np.round(np.max(C_lon),1)
+#    lon_min = np.round(np.min(C_lon),1)
+#    filename = TC_serial+ "_" + I_name + "_" + time_to_string_with_min(I_year[C_i], I_month[C_i], I_day[C_i], I_hour[C_i], I_minute[C_i])
+#    
+#    #% Plot BT image with 3 labels
+#    im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
+#    im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
+#    im3 = plt.imshow(C_mask_nonTC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['red']),origin='lower',alpha=0.3)
+#    im4 = plt.imshow(C_mask_BG, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['blue']),origin='lower',alpha=0.3)
+#    
+#    # Best track center
+#    plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
+#    
+#    # Previous core position
+#    if C_i>0:
+#        plt.plot(C_lon[min_prv_mask_idx],C_lat[min_prv_mask_idy],'co', markersize = 2)
+#        
+#    ax = plt.gca()
+#    ax.set_title(filename)
+#    ax.set_xlabel('Longitude')
+#    ax.set_ylabel('Latitude')
+#    fig.savefig(SAVDIR + filename +".png",dpi=500)
+#    plt.close()
+##    plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2)            
+#
+#    elapsed_time_overall = time.time() - start_time_overall
+#    print ('Cloud extraction for all done in ' +  time.strftime("%H:%M:%S", time.gmtime(elapsed_time_overall)))
 
 #% CLOSE HDF5 FILES
 Hfile_label.close()

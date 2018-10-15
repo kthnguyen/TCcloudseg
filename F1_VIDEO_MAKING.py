@@ -3,7 +3,8 @@ import glob, os
 import numpy as np
 #%%
 WORKPLACE = r"C:\Users\z3439910\Documents\Kien\1_Projects\2_Msc\1_E1\5_GIS_project"
-IRDIR = WORKPLACE + r"\3_Figures\DORIAN"
+filename = "2012242N24317_KIRK"
+IRDIR = WORKPLACE + r"\3_Figures" + "\\" + filename 
 os.chdir(IRDIR)
 images = glob.glob("*.png")
 
@@ -12,7 +13,7 @@ frame = cv2.imread(IRDIR+ "\\" + images[0])
 height, width, layers = frame.shape
 
 fourcc = cv2.VideoWriter_fourcc('M','J','P','G')
-video = cv2.VideoWriter("DORIAN.avi", fourcc,6, (width,height),True)
+video = cv2.VideoWriter(filename+".avi", fourcc,6, (width,height),True)
 
 i = 1
 for image in images:

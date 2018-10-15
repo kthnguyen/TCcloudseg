@@ -18,14 +18,21 @@ import cv2
 from skimage.morphology import watershed
 from skimage import measure
 from skimage.feature import peak_local_max
+from skimage.morphology import reconstruction
 
 WORKPLACE = r"C:\Users\z3439910\Documents\Kien\1_Projects\2_Msc\1_E1\5_GIS_project"
 IRDIR = WORKPLACE + r"\IRimages2012"
-SAVDIR = WORKPLACE + r"\3_Figures\DORIAN_NEW"
 BTDIR = WORKPLACE + r"\2_IBTrACSfiles"
 os.chdir(IRDIR)
 
-#%% Functions
+#% CONSTANT
+TC_serial = '2012215N12313'
+IMAG_RES = 4 #km
+DEG_TO_KM = 111 #ratio
+LAT_BOUND = [-20,60] #NA Basin
+LON_BOUND = [-120,0] #NA Basin
+r = 500
+#% Functions
 def calcdistance_km(latA,lonA,latB,lonB):
     dist = np.sqrt(np.square(latA-latB)+np.square(lonA-lonB))*111
     return np.int(dist)
@@ -78,11 +85,19 @@ def time_to_string_without_min(iyear, imonth, iday, ihour):
     str_itime = str_iyear + str_imonth + str_iday + str_ihour
     return str_itime
 
+def get_coord_to_idx(lat_y,lon_x):
+    idx_x = np.int(np.round((lat_y - LAT_BOUND[0])*111/4))
+    idx_y = np.int(np.round((lon_x - LON_BOUND[0])*111/4))
+    return [idx_x,idx_y]
+
+def get_idx_to_coord(idx_x,idx_y): 
+    lat_y = idx_x*4/111 + LAT_BOUND[0]
+    lon_x = idx_y*4/111 + LON_BOUND[0]
+    return [lat_y,lon_x]
+
 #%
 def get_BTempimage_bound(latmin,latmax,lonmin,lonmax):
     BTempimage = xr.open_dataset(WORKPLACE+ "\IRimages2012\merg_2012080100_4km-pixel.nc4")
-    latmin = 0
-    latmax = 60
     BTemp_lat = BTempimage['lat'].values[:]
     BTemp_lon = BTempimage['lon'].values
     lat_bound = [i for i,val in enumerate(BTemp_lat) if (val>latmin and val<latmax)]   
@@ -90,21 +105,18 @@ def get_BTempimage_bound(latmin,latmax,lonmin,lonmax):
     lon_bound = [i for i,val in enumerate(BTemp_lon) if (val>lonmin and val<lonmax)]   
     lon_val_bound = [val for i,val in enumerate(BTemp_lon) if (val>lonmin and val<lonmax)] 
     return[lat_bound[0],lat_bound[-1],lon_bound[0],lon_bound[-1]]
-#%% Get idices in accordance with brightness temperature images
-IMAG_RES = 4 #km
-DEG_TO_KM = 111 #ratio
-LAT_BOUND = [0,60] #NA Basin
-LON_BOUND = [-120,0] #NA Basin
+#% Get idices in accordance with brightness temperature images
+
 DIM_BOUND = get_BTempimage_bound(LAT_BOUND[0],LAT_BOUND[1],LON_BOUND[0],LON_BOUND[1])#incices from BT images
 
-#%% Best track for a particular storm based on its serial
+#% Best track for a particular storm based on its serial
 # get TC estimated centers
 B_tracks = xr.open_dataset(BTDIR+"\\"+"Year.2012.ibtracs_all.v03r10.nc")
 
 B_TC_serials = B_tracks['storm_sn'].values
 B_TC_names = B_tracks['name'].values
 
-TC_serial = '2012215N12313'
+
 for i,j in enumerate(B_TC_serials):
     if j.decode("utf-8") == TC_serial:
         I_TC_idx = i
@@ -134,24 +146,28 @@ I_minute = pd.to_datetime(I_time_interpolate['time'].values).minute
 I_lat = I_time_interpolate['lat']
 I_lon = I_time_interpolate['lon']
 
-#%% Create an HDF5 file to store label for the current storm
+SAVDIR = WORKPLACE + r"\3_Figures\\" + TC_serial + "_" + I_name +  "_DEMO"
+os.mkdir(SAVDIR)
+
+#% Create an HDF5 file to store label for the current storm
 DIM_LAT = DIM_BOUND[1]-DIM_BOUND[0] + 1
 DIM_LON = DIM_BOUND[3]-DIM_BOUND[2] + 1
 DIM_TIME = np.shape(I_time_interpolate['time'])[0]
-
-Hfile_label = h5py.File(TC_serial + r"_" + I_name + r'_label_displayonly2.h5','w')
+#%
+HFILE_DIR = SAVDIR + r"\\" + TC_serial + r"_" + I_name + r'_labels.h5'
+Hfile_label = h5py.File(HFILE_DIR,'w')
 Hfile_label.close()
 
-Hfile_label = h5py.File(TC_serial + r"_" + I_name + r'_label_displayonly2.h5','r+')
+Hfile_label = h5py.File(HFILE_DIR,'r+')
 Hfile_label.create_dataset('label_TC', shape = (DIM_TIME,DIM_LAT,DIM_LON),chunks=True)
 Hfile_label.create_dataset('label_nonTC', shape = (DIM_TIME,DIM_LAT,DIM_LON),chunks=True)
 Hfile_label.create_dataset('label_BG', shape = (DIM_TIME,DIM_LAT,DIM_LON),chunks=True)
 
 Hfile_label.close()
 
-#%% Start spreading 
+#% Start spreading 
 # open the label HDF5 file
-Hfile_label = h5py.File(TC_serial + r"_" + I_name + r'_label_displayonly2.h5','r+')  
+Hfile_label = h5py.File(HFILE_DIR,'r+')  
 C_label_TC = Hfile_label['label_TC']
 C_label_BG = Hfile_label['label_BG']
 C_label_nonTC = Hfile_label['label_nonTC']
@@ -167,8 +183,7 @@ S_NO_PX = np.round(S_BOUND_KM/IMAG_RES)
 S_BOUND_TOT_KM = 1110 #km
 S_BOUND_TOT_DEG = S_BOUND_TOT_KM/111 #convert km to deg
 S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
-
-#%
+#%% FIRST FRAME
 C_min_prev_mask_val = np.zeros(DIM_TIME)
 #for C_i in range(0,DIM_TIME):
 for C_i in range(0,1):
@@ -210,92 +225,72 @@ for C_i in range(0,1):
                 t_lat = C_lat[i_h]
                 t_lon = C_lon[i_w]
                 t_btemp = C_BTemp[i_h,i_w]
-                if (calcdistance_km(I_lat[C_i], I_lon[C_i], t_lat, t_lon) <S_BOUND_KM) and (np.int(t_btemp)) < 200:
+                if (calcdistance_km(I_lat[C_i], I_lon[C_i], t_lat, t_lon) <S_BOUND_KM) and (np.int(t_btemp)) < 220:
                     C_flag[i_h,i_w] = 1
                     print ('found at ' + str(i_w) + ' and ' + str(i_h))
-    # starting from the second image
-    else:
-        C_flag_prev = C_label_TC[C_i-1,:,:][:]
-        idx_prv = np.where(C_flag_prev == 2)
-        idx_prv_y = idx_prv[0]
-        idx_prv_x = idx_prv[1]
-        min_prv_mask_val = 9999
-        min_prv_mask_idx = 0
-        min_prv_mask_idy = 0
-        for i in range(0,np.shape(idx_prv)[1]-1):
-            if (min_prv_mask_val > C_BTemp[idx_prv_y[i],idx_prv_x[i]]) and (calcdistance_km(I_lat[C_i], I_lon[C_i], C_lat[idx_prv_y[i]], C_lon[idx_prv_x[i]])<200):
-                min_prv_mask_val  = C_BTemp[idx_prv_y[i],idx_prv_x[i]]
-                min_prv_mask_idx = idx_prv_x[i]
-                min_prv_mask_idy = idx_prv_y[i]
+    C_Core = C_flag[:]     
     
-        C_min_prev_mask_val[C_i] =  min_prv_mask_val
-        C_flag[min_prv_mask_idy,min_prv_mask_idx] = 1
-        C_flag[min_prv_mask_idy,min_prv_mask_idx+1] = 1
-        C_flag[min_prv_mask_idy,min_prv_mask_idx-1] = 1
-        C_flag[min_prv_mask_idy+1,min_prv_mask_idx] = 1
-        C_flag[min_prv_mask_idy-1,min_prv_mask_idx] = 1
-        C_flag[min_prv_mask_idy,min_prv_mask_idx+2] = 1
-        C_flag[min_prv_mask_idy,min_prv_mask_idx-2] = 1
-        C_flag[min_prv_mask_idy+2,min_prv_mask_idx] = 1
-        C_flag[min_prv_mask_idy-2,min_prv_mask_idx] = 1
-        print("Previous mask min at value " + str(min_prv_mask_val) + " K")
-    C_Core = C_flag[:]    
-    
-    #% Start spreading
+    #%% Start spreading
+    I_idx = get_coord_to_idx(I_lat[C_i],I_lon[C_i])
     C_binary = np.where(C_BTemp>280,0,C_BTemp)
     C_binary = np.where(C_binary>1,1,C_binary)
-    C_binary8 = C_binary.astype(np.uint8)
+    C_binary_cut = np.zeros([DIM_LAT,DIM_LON])
+    r = 800 #the bounding box side = 2r
+    C_binary_cut[I_idx[0]-r:I_idx[0]+r,I_idx[1]-r:I_idx[1]+r] = C_binary[I_idx[0]-r:I_idx[0]+r,I_idx[1]-r:I_idx[1]+r] 
+    C_binary8 = C_binary_cut.astype(np.uint8)
     
     kernel = np.ones((3,3),np.uint8)
     opening = cv2.morphologyEx(C_binary8,cv2.MORPH_OPEN,kernel, iterations = 2)
     dist_transform = cv2.distanceTransform(opening,cv2.DIST_L2,0)
     ret, sure_fg = cv2.threshold(dist_transform,0.04*dist_transform.max(),255,0)
-#    local_maxi = peak_local_max(distance, indices=False, footprint=np.ones((3, 3)), labels=C_binary8)
-#    markers = measure.label(local_maxi)
-    labels_ws = watershed(-dist_transform, C_Core, mask=sure_fg)
-    
-    C_flag = np.where(labels_ws==1,2,labels_ws)
-#%
-    fig = plt.figure()
-    lat_max = np.round(np.max(C_lat),1)
-    lat_min = np.round(np.min(C_lat),1)
-    lon_max = np.round(np.max(C_lon),1)
-    lon_min = np.round(np.min(C_lon),1)
-    filename = TC_serial+ "_" + I_name + "_" + time_to_string_with_min(I_year[C_i], I_month[C_i], I_day[C_i], I_hour[C_i], I_minute[C_i])
-    
-    plt.subplot(221)
-    #% Plot BT image with 3 labels
-    im = plt.imshow(C_binary8, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys_r',origin='lower')
-    # Best track center
-    plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
-    ax = plt.gca()
-    ax.set_title(filename)
-    ax.set_xlabel('Longitude')
-    
-    plt.subplot(222)
-    #% Plot BT image with 3 labels
-    im = plt.imshow(dist_transform, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys_r',origin='lower')
-    plt.subplot(223)
-    im = plt.imshow(sure_fg, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys_r',origin='lower')
-    plt.subplot(224)
-    C_mask_TC = np.where(C_flag == 0, np.NaN , C_flag)
-    C_mask_Core = np.where(C_Core == 0, np.NaN , C_Core)
-    im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
-    im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
-    im2 = plt.imshow(C_mask_Core, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['green']),origin='lower',alpha=0.3)
-    # Best track center
-    plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
-    ax = plt.gca()
-    ax.set_title(filename)
-    ax.set_xlabel('Longitude')
-    ax.set_ylabel('Latitude')
-    
-    
-    ax.set_ylabel('Latitude')
-    plt.show()    
 
-
-    #%%
+    dist_transform = cv2.distanceTransform(opening,cv2.DIST_L2,0)
+    labels_ws = watershed(-dist_transform, C_flag, mask=C_binary8)
+    
+    C_binary8_second = np.where(labels_ws>0, C_binary8, 0)
+    
+    C_flag = np.where(labels_ws == 0, 0,labels_ws)
+    #%
+    #% Second round - divide the previous mask into 2 blobs
+    ##################################################################
+    seed = np.copy(C_binary8_second)
+    seed[1:-1, 1:-1] = C_binary8_second.max()
+    mask = C_binary8_second
+    
+    
+    # fill all holes the do distance transform
+    C_binary8_filled = reconstruction(seed, mask, method='erosion')
+    C_binary8_filled8 = C_binary8_filled .astype(np.uint8)
+    dist_transform_second = cv2.distanceTransform(C_binary8_filled8,cv2.DIST_L2,0)  
+   
+    # Maximum them find maxima
+    maximum_fil_result = ndimage.maximum_filter(dist_transform_second, size=1)
+    
+    min_distance_val = 1
+    flag = 0
+    while flag == 0: 
+        maximum_coordinates = peak_local_max(maximum_fil_result,min_distance = min_distance_val, indices = True)
+        min_distance_val +=1
+        if np.int(np.shape(maximum_coordinates)[0]) < 6:
+            flag = 1
+            
+    markers_two = np.zeros([DIM_LAT,DIM_LON])
+    for i in range(0,np.shape(maximum_coordinates)[0]-1):
+        markers_two[maximum_coordinates[i,0],maximum_coordinates[i,1]] = dist_transform_second[maximum_coordinates[i,0],maximum_coordinates[i,1]]
+    
+    labels_ws_second = watershed(-dist_transform_second, markers_two, mask=C_binary8_second,watershed_line=False)
+    blobs_labels = measure.label(labels_ws_second,neighbors=4, background=0)
+    
+    #%
+    box_from_BTcenter = dist_transform_second[I_idx[0]-100:I_idx[0]+100,I_idx[1]-100:I_idx[1]+100]
+    max_idx_from_box = np.unravel_index(np.argmax(box_from_BTcenter, axis=None), box_from_BTcenter.shape) #idx within box
+    max_idx  = [I_idx[0]-100 + max_idx_from_box[0],I_idx[1] - 100 + max_idx_from_box[1]] #idx in the image
+    max_blob_value = blobs_labels[max_idx[0],max_idx[1]]
+    
+    C_flag = np.where(blobs_labels == max_blob_value,2,0)
+#    C_flag = np.where(blobs_labels == 3,2,C_flag)
+    
+     #%
     C_label_TC[C_i,:,:] = C_flag    
     #%
     C_flag_BG = np.where(C_BTemp<280,0,C_BTemp)
@@ -308,47 +303,44 @@ for C_i in range(0,1):
     C_label_TC[C_i,:,:] = C_flag #flag=2
     C_label_nonTC[C_i,:,:] = C_flag_nonTC #flag=3
     C_label_BG[C_i,:,:] = C_flag_BG #flag=4
-    
-    #% Plot image
-    #flag_pos = np.where(c_flag==1)
+    # % PLOT RESULTS
+    # Prepare masks with NaN values
     C_mask_TC = np.where(C_flag == 0, np.NaN , C_flag)
-    C_mask_nonTC = np.where(C_flag_nonTC == 0, np.NaN , C_flag_nonTC)
-    C_mask_BG = np.where(C_flag_BG == 0, np.NaN , C_flag_BG)
-    #mask_pos = np.where(c_mask>0)
-    #c_Tb = Cdataset.Tb[C_i,:,:].values
+    C_mask_Core = np.where(C_Core == 0, np.NaN , C_Core)
     
-    
-    #% plot IR image and the center point
+    #%% Plot
     fig = plt.figure()
     lat_max = np.round(np.max(C_lat),1)
     lat_min = np.round(np.min(C_lat),1)
     lon_max = np.round(np.max(C_lon),1)
     lon_min = np.round(np.min(C_lon),1)
     filename = TC_serial+ "_" + I_name + "_" + time_to_string_with_min(I_year[C_i], I_month[C_i], I_day[C_i], I_hour[C_i], I_minute[C_i])
+    #%
     
+    plt.subplot(221)
     #% Plot BT image with 3 labels
-    im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
-    im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
-    im3 = plt.imshow(C_mask_nonTC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['red']),origin='lower',alpha=0.3)
-    im4 = plt.imshow(C_mask_BG, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['blue']),origin='lower',alpha=0.3)
-    
+    im = plt.imshow(C_binary8, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys_r',origin='lower')
     # Best track center
     plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
     
-    # Previous core position
-    if C_i>0:
-        plt.plot(C_lon[min_prv_mask_idx],C_lat[min_prv_mask_idy],'co', markersize = 2)
-        
-    ax = plt.gca()
-    ax.set_title(filename)
-    ax.set_xlabel('Longitude')
-    ax.set_ylabel('Latitude')
-    fig.savefig(SAVDIR + "\\" + filename +".png",dpi=1000)
-    plt.close()
-#    plt.show()            
+    plt.subplot(222)
+    #% Plot BT image with 3 labels
+#    im = plt.imshow(dist_transform, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys_r',origin='lower')
+    im = plt.imshow(blobs_labels, extent = (lon_min, lon_max, lat_min, lat_max),  cmap=plt.cm.nipy_spectral,interpolation='nearest',origin='lower')
 
-    elapsed_time_overall = time.time() - start_time_overall
-    print ('Cloud extraction for all done in ' +  time.strftime("%H:%M:%S", time.gmtime(elapsed_time_overall)))
+    plt.subplot(223)
+    im = plt.imshow(dist_transform_second, extent = (lon_min, lon_max, lat_min, lat_max)  cmap='Greys_r',origin='lower')
+    plt.plot(maximum_coordinates[:, 1], maximum_coordinates[:, 0], 'r.')
+    plt.subplot(224)
 
-#% CLOSE HDF5 FILES
+    im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
+    im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
+    im2 = plt.imshow(C_mask_Core, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['green']),origin='lower',alpha=0.3)
+    # Best track center
+    plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
+    plt.show()    
+
+
+
+#%% CLOSE HDF5 FILES
 Hfile_label.close()
