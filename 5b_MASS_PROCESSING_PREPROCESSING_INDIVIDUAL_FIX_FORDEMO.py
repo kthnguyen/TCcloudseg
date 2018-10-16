@@ -291,7 +291,7 @@ for TC_i in range(0,1):
         # Prepare masks with NaN values
         C_mask_TC = np.where(C_flag == 0, np.NaN , C_flag)
 #        C_mask_Core = np.where(C_Core == 0, np.NaN , C_Core)
-        C_mask_TC_temp = np.where(C_flag_core == 0, np.NaN , C_flag_temp)
+        C_mask_TC_temp = np.where(C_flag_overflow == 0, np.NaN , C_flag_temp)
         C_mask_TC_compared = np.where(C_flag_compared == 0, np.NaN , C_flag_temp)
         # Plot
         fig = plt.figure()
@@ -331,7 +331,7 @@ for TC_i in range(0,1):
         plt.plot(I_idx[1],I_idx[0],'or', markersize = 2)  
         
         plt.subplot(235)
-        im = plt.imshow(blobs_labels_core, extent = (lon_min, lon_max, lat_min, lat_max),  cmap=plt.cm.nipy_spectral,interpolation='nearest',origin='lower')
+        im = plt.imshow(blobs_labels_compared, extent = (lon_min, lon_max, lat_min, lat_max),  cmap=plt.cm.nipy_spectral,interpolation='nearest',origin='lower')
         
         plt.subplot(236)
 #        im = plt.imshow(props_coords_list, extent = (lon_min, lon_max, lat_min, lat_max),  cmap=plt.cm.nipy_spectral,interpolation='nearest',origin='lower')

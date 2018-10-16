@@ -114,70 +114,70 @@ B_tracks = xr.open_dataset(BTDIR+"\\"+"Year.2012.ibtracs_all.v03r10.nc")
 B_TC_serials = B_tracks['storm_sn'].values
 B_TC_names = B_tracks['name'].values
 
-TC_serial_list = ["2012140N33283","2012147N30284","2012169N29291","2012176N26272","2012223N14317","2012229N28305","2012234N16315","2012235N11328", "2012242N13333", "2012242N24317"]
+#TC_serial_list = ["2012147N30284","2012147N30284","2012169N29291","2012176N26272","2012223N14317","2012229N28305","2012234N16315","2012235N11328", "2012242N13333", "2012242N24317"]
 #for TC_i in range(0,len(TC_serial_list)):    
-for TC_i in range(2,3): 
-    TC_serial = TC_serial_list[TC_i]
-    for i,j in enumerate(B_TC_serials):
-        if j.decode("utf-8") == TC_serial:
-            I_TC_idx = i
-    ## extract variables into arrays
-    I_name = B_TC_names[I_TC_idx].decode("utf-8")
-    I_TC_time = B_tracks['source_time'].values[I_TC_idx,:]
-    I_TC_time = pd.DataFrame(I_TC_time).dropna().values[:,0]
-    print ("Starting processing TC " + I_name)
-    
-    
-    I_lat = B_tracks['lat_for_mapping'].values[I_TC_idx,:]
-    I_lat = pd.DataFrame(I_lat).dropna().values[:,0]
-    I_lon = B_tracks['lon_for_mapping'].values[I_TC_idx,:]
-    I_lon = pd.DataFrame(I_lon).dropna().values[:,0]
-    
-    # interpolate best track lat long to 0.5-hour intervals
-    df = pd.DataFrame({'time':I_TC_time,'lat':I_lat,'lon':I_lon})
-    df = df.set_index('time')
-    df_reindexed = df.reindex(pd.date_range(start=I_TC_time[0],end=I_TC_time[len(I_TC_time)-1],freq='0.5H'))
-    I_time_interpolate = df_reindexed.interpolate(method='time')
-    I_time_interpolate.index.name = 'time'
-    I_time_interpolate.reset_index(inplace = True)
-    I_year = pd.to_datetime(I_time_interpolate['time'].values).year
-    I_month = pd.to_datetime(I_time_interpolate['time'].values).month
-    I_day = pd.to_datetime(I_time_interpolate['time'].values).day
-    I_hour = pd.to_datetime(I_time_interpolate['time'].values).hour
-    I_minute = pd.to_datetime(I_time_interpolate['time'].values).minute
-    I_lat = I_time_interpolate['lat']
-    I_lon = I_time_interpolate['lon']
-    
-    SAVDIR = WORKPLACE + r"\3_Figures\\" + TC_serial + "_" + I_name
-    
-    DIM_LAT = DIM_BOUND[1]-DIM_BOUND[0] + 1
-    DIM_LON = DIM_BOUND[3]-DIM_BOUND[2] + 1
-    DIM_TIME = np.shape(I_time_interpolate['time'])[0]
-    
-    ##%% Start spreading 
-    # open the label HDF5 file
-    HFILE_DIR = SAVDIR + r"\\" + TC_serial + r"_" + I_name + r'_labels.h5'
-    Hfile_label = h5py.File(HFILE_DIR,'r+')  
-    C_label_TC = Hfile_label['label_TC']
-    C_label_BG = Hfile_label['label_BG']
-    C_label_nonTC = Hfile_label['label_nonTC']
-    
-    # define some variables
-    TB_THRES = 280
-    start_time_overall = time.time()
-    # define search boundry
-    S_BOUND_KM = 300 #km
-    S_BOUND_DEG = S_BOUND_KM/111 #convert km to deg
-    S_NO_PX = np.round(S_BOUND_KM/IMAG_RES)
-    
-    S_BOUND_TOT_KM = 1110 #km
-    S_BOUND_TOT_DEG = S_BOUND_TOT_KM/111 #convert km to deg
-    S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES) 
+#for TC_i in range(0,3): 
+TC_serial = "2012147N30284"
+for i,j in enumerate(B_TC_serials):
+    if j.decode("utf-8") == TC_serial:
+        I_TC_idx = i
+## extract variables into arrays
+I_name = B_TC_names[I_TC_idx].decode("utf-8")
+I_TC_time = B_tracks['source_time'].values[I_TC_idx,:]
+I_TC_time = pd.DataFrame(I_TC_time).dropna().values[:,0]
+print ("Starting processing TC " + I_name)
+
+
+I_lat = B_tracks['lat_for_mapping'].values[I_TC_idx,:]
+I_lat = pd.DataFrame(I_lat).dropna().values[:,0]
+I_lon = B_tracks['lon_for_mapping'].values[I_TC_idx,:]
+I_lon = pd.DataFrame(I_lon).dropna().values[:,0]
+
+# interpolate best track lat long to 0.5-hour intervals
+df = pd.DataFrame({'time':I_TC_time,'lat':I_lat,'lon':I_lon})
+df = df.set_index('time')
+df_reindexed = df.reindex(pd.date_range(start=I_TC_time[0],end=I_TC_time[len(I_TC_time)-1],freq='0.5H'))
+I_time_interpolate = df_reindexed.interpolate(method='time')
+I_time_interpolate.index.name = 'time'
+I_time_interpolate.reset_index(inplace = True)
+I_year = pd.to_datetime(I_time_interpolate['time'].values).year
+I_month = pd.to_datetime(I_time_interpolate['time'].values).month
+I_day = pd.to_datetime(I_time_interpolate['time'].values).day
+I_hour = pd.to_datetime(I_time_interpolate['time'].values).hour
+I_minute = pd.to_datetime(I_time_interpolate['time'].values).minute
+I_lat = I_time_interpolate['lat']
+I_lon = I_time_interpolate['lon']
+
+SAVDIR = WORKPLACE + r"\3_Figures\\" + TC_serial + "_" + I_name
+
+DIM_LAT = DIM_BOUND[1]-DIM_BOUND[0] + 1
+DIM_LON = DIM_BOUND[3]-DIM_BOUND[2] + 1
+DIM_TIME = np.shape(I_time_interpolate['time'])[0]
+
+##%% Start spreading 
+# open the label HDF5 file
+HFILE_DIR = SAVDIR + r"\\" + TC_serial + r"_" + I_name + r'_labels.h5'
+Hfile_label = h5py.File(HFILE_DIR,'r+')  
+C_label_TC = Hfile_label['label_TC']
+C_label_BG = Hfile_label['label_BG']
+C_label_nonTC = Hfile_label['label_nonTC']
+
+# define some variables
+TB_THRES = 280
+start_time_overall = time.time()
+# define search boundry
+S_BOUND_KM = 300 #km
+S_BOUND_DEG = S_BOUND_KM/111 #convert km to deg
+S_NO_PX = np.round(S_BOUND_KM/IMAG_RES)
+
+S_BOUND_TOT_KM = 1110 #km
+S_BOUND_TOT_DEG = S_BOUND_TOT_KM/111 #convert km to deg
+S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES) 
     
     ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     #%% WHOLE RUN
-    for C_i in range(96,DIM_TIME):
-#    for C_i in range(212,213):
+    for C_i in range(43,DIM_TIME):
+#    for C_i in range(44,45):
         
         #% Acquire BT images
         C_label_TC[C_i,:,:] = np.zeros([DIM_LAT,DIM_LON])
@@ -226,7 +226,7 @@ for TC_i in range(2,3):
 #        for label in range(135,136):
             if label >0:
                 prop_volume = np.count_nonzero(blobs_labels_core == label)
-                if prop_volume > C_flag_core_volume*0.2:
+                if prop_volume > C_flag_core_volume*0.02:
                     props_indices_list = np.argwhere(blobs_labels_core == label) #list of indices
                     prop_lat_y = np.asarray([C_lat[i] for i in props_indices_list[:,0]]) # separate two columns and refer to C_lat and C_lon
                     prop_lon_x = np.asarray([C_lon[i] for i in props_indices_list[:,1]])
