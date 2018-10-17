@@ -176,7 +176,7 @@ S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
     
     ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     #%% WHOLE RUN
-    for C_i in range(43,DIM_TIME):
+    for C_i in range(54,DIM_TIME):
 #    for C_i in range(44,45):
         
         #% Acquire BT images
@@ -226,7 +226,7 @@ S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
 #        for label in range(135,136):
             if label >0:
                 prop_volume = np.count_nonzero(blobs_labels_core == label)
-                if prop_volume > C_flag_core_volume*0.02:
+                if prop_volume > C_flag_core_volume*0.2:
                     props_indices_list = np.argwhere(blobs_labels_core == label) #list of indices
                     prop_lat_y = np.asarray([C_lat[i] for i in props_indices_list[:,0]]) # separate two columns and refer to C_lat and C_lon
                     prop_lon_x = np.asarray([C_lon[i] for i in props_indices_list[:,1]])

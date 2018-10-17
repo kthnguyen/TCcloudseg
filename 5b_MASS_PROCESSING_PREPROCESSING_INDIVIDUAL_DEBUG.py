@@ -117,7 +117,7 @@ B_TC_names = B_tracks['name'].values
 #TC_serial_list = ["2012147N30284","2012147N30284","2012169N29291","2012176N26272","2012223N14317","2012229N28305","2012234N16315","2012235N11328", "2012242N13333", "2012242N24317"]
 #for TC_i in range(0,len(TC_serial_list)):    
 #for TC_i in range(0,3): 
-TC_serial = "2012147N30284"
+TC_serial = "2012246N29323"
 for i,j in enumerate(B_TC_serials):
     if j.decode("utf-8") == TC_serial:
         I_TC_idx = i
@@ -162,22 +162,22 @@ C_label_TC = Hfile_label['label_TC']
 C_label_BG = Hfile_label['label_BG']
 C_label_nonTC = Hfile_label['label_nonTC']
     
-    # define some variables
-    TB_THRES = 280
-    start_time_overall = time.time()
-    # define search boundry
-    S_BOUND_KM = 300 #km
-    S_BOUND_DEG = S_BOUND_KM/111 #convert km to deg
-    S_NO_PX = np.round(S_BOUND_KM/IMAG_RES)
-    
-    S_BOUND_TOT_KM = 1110 #km
-    S_BOUND_TOT_DEG = S_BOUND_TOT_KM/111 #convert km to deg
-    S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES) 
-    
+# define some variables
+TB_THRES = 280
+start_time_overall = time.time()
+# define search boundry
+S_BOUND_KM = 300 #km
+S_BOUND_DEG = S_BOUND_KM/111 #convert km to deg
+S_NO_PX = np.round(S_BOUND_KM/IMAG_RES)
+
+S_BOUND_TOT_KM = 1110 #km
+S_BOUND_TOT_DEG = S_BOUND_TOT_KM/111 #convert km to deg
+S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES) 
+
     ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     #%% WHOLE RUN
 #    for C_i in range(138,DIM_TIME):
-    for C_i in range(44,45):
+    for C_i in range(1,2):
         
         #% Acquire BT images
         C_label_TC[C_i,:,:] = np.zeros([DIM_LAT,DIM_LON])
@@ -214,7 +214,7 @@ C_label_nonTC = Hfile_label['label_nonTC']
         C_flag_core = C_flag_core.astype(np.uint8)
         blobs_labels_core = measure.label(C_flag_core,neighbors=4, background=0)
         
-        #%% Find all separate blobs after applying the previous mask, only keep the max volume blob
+        #% Find all separate blobs after applying the previous mask, only keep the max volume blob
 #        regions_core = measure.regionprops(blobs_labels_core)
         min_distance_from_centre = 99999
         C_flag_core_volume = np.count_nonzero(C_flag_core)
@@ -223,7 +223,7 @@ C_label_nonTC = Hfile_label['label_nonTC']
 #        for label in range(135,136):
             if label >0:
                 prop_volume = np.count_nonzero(blobs_labels_core == label)
-                if prop_volume > C_flag_core_volume*0.02:
+                if prop_volume > C_flag_core_volume*0.2:
                     props_indices_list = np.argwhere(blobs_labels_core == label) #list of indices
                     prop_lat_y = np.asarray([C_lat[i] for i in props_indices_list[:,0]]) # separate two columns and refer to C_lat and C_lon
                     prop_lon_x = np.asarray([C_lon[i] for i in props_indices_list[:,1]])
@@ -270,7 +270,7 @@ C_label_nonTC = Hfile_label['label_nonTC']
         
         volume_core = np.count_nonzero(C_flag_core)
         if volume_core < 30000:
-            volume_ratio = 1.5
+            volume_ratio = 2
         elif volume_core > 30000 and volume_core < 80000:
             volume_ratio = 1
         elif volume_core > 80000 and volume_core < 100000:
@@ -284,7 +284,7 @@ C_label_nonTC = Hfile_label['label_nonTC']
                 if volume_label < volume_core*volume_ratio:
                     C_flag = np.where(blobs_labels_compared==label_i,C_flag_overflow,C_flag)
         
-        #%%
+        #%
         C_label_TC[C_i,:,:] = C_flag    
         #%
         C_flag_BG = np.where(C_BTemp<280,0,C_BTemp)
@@ -412,7 +412,7 @@ C_label_nonTC = Hfile_label['label_nonTC']
         
 #        print(filename + " done")
     #    plt.show()            
-    #%
+    #%%
     elapsed_time_overall = time.time() - start_time_overall
     print ('Cloud extraction for all done in ' +  time.strftime("%H:%M:%S", time.gmtime(elapsed_time_overall)))
     

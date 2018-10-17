@@ -26,7 +26,7 @@ BTDIR = WORKPLACE + r"\2_IBTrACSfiles"
 os.chdir(IRDIR)
 
 #% CONSTANT
-TC_serial = '2012215N12313'
+TC_serial = '2012296N20309'
 IMAG_RES = 4 #km
 DEG_TO_KM = 111 #ratio
 LAT_BOUND = [-20,60] #NA Basin
@@ -146,7 +146,7 @@ I_minute = pd.to_datetime(I_time_interpolate['time'].values).minute
 I_lat = I_time_interpolate['lat']
 I_lon = I_time_interpolate['lon']
 
-SAVDIR = WORKPLACE + r"\3_Figures\\" + TC_serial + "_" + I_name +  "_DEMO"
+SAVDIR = WORKPLACE + r"\3_Figures\\" + TC_serial + "_" + I_name
 os.mkdir(SAVDIR)
 
 #% Create an HDF5 file to store label for the current storm
@@ -225,14 +225,14 @@ for C_i in range(0,1):
                 t_lat = C_lat[i_h]
                 t_lon = C_lon[i_w]
                 t_btemp = C_BTemp[i_h,i_w]
-                if (calcdistance_km(I_lat[C_i], I_lon[C_i], t_lat, t_lon) <S_BOUND_KM) and (np.int(t_btemp)) < 220:
+                if (calcdistance_km(I_lat[C_i], I_lon[C_i], t_lat, t_lon) <S_BOUND_KM) and (np.int(t_btemp)) < 230:
                     C_flag[i_h,i_w] = 1
                     print ('found at ' + str(i_w) + ' and ' + str(i_h))
     C_Core = C_flag[:]     
     
     #%% Start spreading
     I_idx = get_coord_to_idx(I_lat[C_i],I_lon[C_i])
-    C_binary = np.where(C_BTemp>280,0,C_BTemp)
+    C_binary = np.where(C_BTemp>270,0,C_BTemp)
     C_binary = np.where(C_binary>1,1,C_binary)
     C_binary_cut = np.zeros([DIM_LAT,DIM_LON])
     r = 800 #the bounding box side = 2r
@@ -271,7 +271,7 @@ for C_i in range(0,1):
     while flag == 0: 
         maximum_coordinates = peak_local_max(maximum_fil_result,min_distance = min_distance_val, indices = True)
         min_distance_val +=1
-        if np.int(np.shape(maximum_coordinates)[0]) < 6:
+        if np.int(np.shape(maximum_coordinates)[0]) < 5:
             flag = 1
             
     markers_two = np.zeros([DIM_LAT,DIM_LON])
@@ -329,7 +329,7 @@ for C_i in range(0,1):
     im = plt.imshow(blobs_labels, extent = (lon_min, lon_max, lat_min, lat_max),  cmap=plt.cm.nipy_spectral,interpolation='nearest',origin='lower')
 
     plt.subplot(223)
-    im = plt.imshow(dist_transform_second, extent = (lon_min, lon_max, lat_min, lat_max)  cmap='Greys_r',origin='lower')
+    im = plt.imshow(dist_transform_second, extent = (lon_min, lon_max, lat_min, lat_max) , cmap='Greys_r',origin='lower')
     plt.plot(maximum_coordinates[:, 1], maximum_coordinates[:, 0], 'r.')
     plt.subplot(224)
 

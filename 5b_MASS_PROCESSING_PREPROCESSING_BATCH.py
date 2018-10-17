@@ -114,8 +114,9 @@ B_tracks = xr.open_dataset(BTDIR+"\\"+"Year.2012.ibtracs_all.v03r10.nc")
 B_TC_serials = B_tracks['storm_sn'].values
 B_TC_names = B_tracks['name'].values
 
-TC_serial_list = ["2012140N33283","2012147N30284","2012169N29291","2012176N26272","2012223N14317","2012229N28305","2012234N16315","2012235N11328", "2012242N13333", "2012242N24317"]
-for TC_i in range(2,len(TC_serial_list)):    
+#2012 batch 1 #TC_serial_list = ["2012140N33283","2012147N30284","2012169N29291","2012176N26272","2012223N14317","2012229N28305","2012234N16315","2012235N11328", "2012242N13333", "2012242N24317"]
+TC_serial_list = ["2012246N29323","2012255N16322","2012277N12322","2012285N26288","2012287N15297","2012296N14283","2012296N20309"]
+for TC_i in range(0,len(TC_serial_list)):    
 #for TC_i in range(0,1): 
     TC_serial = TC_serial_list[TC_i]
     for i,j in enumerate(B_TC_serials):
@@ -179,7 +180,7 @@ for TC_i in range(2,len(TC_serial_list)):
     ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     #% WHOLE RUN
     for C_i in range(1,DIM_TIME):
-    #for C_i in range(33,34):
+#    for C_i in range(1,2):
         
         #% Acquire BT images
         C_label_TC[C_i,:,:] = np.zeros([DIM_LAT,DIM_LON])
@@ -211,7 +212,7 @@ for TC_i in range(2,len(TC_serial_list)):
         I_idx_prev = get_coord_to_idx(I_lat[C_i-1],I_lon[C_i-1])
         I_idx = get_coord_to_idx(I_lat[C_i],I_lon[C_i])
 #        C_flag_temp [I_idx[0]-r:I_idx[0]+r,I_idx[1]-r:I_idx[1]+r] = C_flag_prev[I_idx_prev[0]-r:I_idx_prev[0]+r,I_idx_prev[1]-r:I_idx_prev[1]+r] 
-#        C_flag_temp = C_flag_prev
+        C_flag_temp = C_flag_prev
         C_flag_core = np.where(C_BTemp > 280, 0,C_flag_temp)
         C_flag_core = C_flag_core.astype(np.uint8)
         blobs_labels_core = measure.label(C_flag_core,neighbors=4, background=0)
@@ -271,7 +272,11 @@ for TC_i in range(2,len(TC_serial_list)):
         unique_labels = np.unique(blobs_labels_compared)
         
         volume_core = np.count_nonzero(C_flag_core)
-        if volume_core < 30000:
+        if volume_core < 8000:
+            volume_ratio = 5
+        elif volume_core > 8000 and volume_core < 15000:
+            volume_ratio = 3
+        elif volume_core > 15000 and volume_core < 30000:
             volume_ratio = 1.5
         elif volume_core > 30000 and volume_core < 80000:
             volume_ratio = 1
