@@ -1,9 +1,9 @@
 import cv2
 import glob, os
 import numpy as np
-#%%
+#%
 WORKPLACE = r"C:\Users\z3439910\Documents\Kien\1_Projects\2_Msc\1_E1\5_GIS_project"
-filename = "2012242N24317_KIRK"
+filename = "2012255N16322_NADINE"
 IRDIR = WORKPLACE + r"\3_Figures" + "\\" + filename 
 os.chdir(IRDIR)
 images = glob.glob("*.png")

@@ -117,7 +117,7 @@ B_TC_names = B_tracks['name'].values
 #TC_serial_list = ["2012147N30284","2012147N30284","2012169N29291","2012176N26272","2012223N14317","2012229N28305","2012234N16315","2012235N11328", "2012242N13333", "2012242N24317"]
 #for TC_i in range(0,len(TC_serial_list)):    
 #for TC_i in range(0,3): 
-TC_serial = "2012147N30284"
+TC_serial = "2012255N16322"
 for i,j in enumerate(B_TC_serials):
     if j.decode("utf-8") == TC_serial:
         I_TC_idx = i
@@ -176,7 +176,7 @@ S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
     
     ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     #%% WHOLE RUN
-    for C_i in range(54,DIM_TIME):
+    for C_i in range(261,DIM_TIME):
 #    for C_i in range(44,45):
         
         #% Acquire BT images
@@ -272,13 +272,17 @@ S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
         unique_labels = np.unique(blobs_labels_compared)
         
         volume_core = np.count_nonzero(C_flag_core)
-        if volume_core < 30000:
+        if volume_core < 8000:
+            volume_ratio = 5
+        elif volume_core > 8000 and volume_core < 15000:
+            volume_ratio = 3
+        elif volume_core > 15000 and volume_core < 30000:
             volume_ratio = 1.5
-        elif volume_core > 30000 and volume_core < 80000:
+        elif volume_core > 30000 and volume_core < 90000:
             volume_ratio = 1
-        elif volume_core > 80000 and volume_core < 100000:
+        elif volume_core > 90000 and volume_core < 120000:
             volume_ratio = 0.2
-        elif volume_core > 100000 :
+        elif volume_core > 120000 :
             volume_ratio = 0.05
         # Go through all separate blobs, if volume less than 50 percent of the core mask then select
         for label_i in unique_labels:
@@ -370,8 +374,8 @@ S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
         #% Plot BT image with 3 labels
         im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
         im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
-        im3 = plt.imshow(C_mask_nonTC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['red']),origin='lower',alpha=0.3)
-        im4 = plt.imshow(C_mask_BG, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['blue']),origin='lower',alpha=0.3)
+#        im3 = plt.imshow(C_mask_nonTC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['red']),origin='lower',alpha=0.3)
+#        im4 = plt.imshow(C_mask_BG, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['blue']),origin='lower',alpha=0.3)
         
         # Best track center
         plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 

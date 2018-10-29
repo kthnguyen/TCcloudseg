@@ -147,26 +147,14 @@ I_lat = I_time_interpolate['lat']
 I_lon = I_time_interpolate['lon']
 
 SAVDIR = WORKPLACE + r"\3_Figures\\" + TC_serial + "_" + I_name
-os.mkdir(SAVDIR)
 
-#% Create an HDF5 file to store label for the current storm
 DIM_LAT = DIM_BOUND[1]-DIM_BOUND[0] + 1
 DIM_LON = DIM_BOUND[3]-DIM_BOUND[2] + 1
 DIM_TIME = np.shape(I_time_interpolate['time'])[0]
-#%
-HFILE_DIR = SAVDIR + r"\\" + TC_serial + r"_" + I_name + r'_labels.h5'
-Hfile_label = h5py.File(HFILE_DIR,'w')
-Hfile_label.close()
-
-Hfile_label = h5py.File(HFILE_DIR,'r+')
-Hfile_label.create_dataset('label_TC', shape = (DIM_TIME,DIM_LAT,DIM_LON),chunks=True)
-Hfile_label.create_dataset('label_nonTC', shape = (DIM_TIME,DIM_LAT,DIM_LON),chunks=True)
-Hfile_label.create_dataset('label_BG', shape = (DIM_TIME,DIM_LAT,DIM_LON),chunks=True)
-
-Hfile_label.close()
 
 #% Start spreading 
 # open the label HDF5 file
+HFILE_DIR = SAVDIR + r"\\" + TC_serial + r"_" + I_name + r'_labels.h5'
 Hfile_label = h5py.File(HFILE_DIR,'r+')  
 C_label_TC = Hfile_label['label_TC']
 C_label_BG = Hfile_label['label_BG']
@@ -186,7 +174,7 @@ S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
 #%% FIRST FRAME
 C_min_prev_mask_val = np.zeros(DIM_TIME)
 #for C_i in range(0,DIM_TIME):
-for C_i in range(0,1):
+for C_i in range(171,172):
     
     #% Acquire BT images
     C_label_TC[C_i,:,:] = np.zeros([DIM_LAT,DIM_LON])
@@ -213,29 +201,27 @@ for C_i in range(0,1):
     #% Initilize core for spreading
     C_flag = C_label_TC[C_i,:,:][:]
     C_flag = np.zeros([DIM_LAT,DIM_LON])
-    # first image
-    if C_i == 0:    
-        
-        box_i_w = [i_w for i_w,x_w in enumerate(C_lon) if abs(I_lon[C_i]-x_w) < S_BOUND_DEG]
-        box_i_h = [i_h for i_h,x_h in enumerate(C_lat) if abs(I_lat[C_i]-x_h) < S_BOUND_DEG]
-        
-        #
-        for i_w in box_i_w:
-            for i_h in box_i_h:
-                t_lat = C_lat[i_h]
-                t_lon = C_lon[i_w]
-                t_btemp = C_BTemp[i_h,i_w]
-                if (calcdistance_km(I_lat[C_i], I_lon[C_i], t_lat, t_lon) <S_BOUND_KM) and (np.int(t_btemp)) < 230:
-                    C_flag[i_h,i_w] = 1
-                    print ('found at ' + str(i_w) + ' and ' + str(i_h))
+    # first image     
+    box_i_w = [i_w for i_w,x_w in enumerate(C_lon) if abs(I_lon[C_i]-x_w) < S_BOUND_DEG]
+    box_i_h = [i_h for i_h,x_h in enumerate(C_lat) if abs(I_lat[C_i]-x_h) < S_BOUND_DEG]
+    
+    #
+    for i_w in box_i_w:
+        for i_h in box_i_h:
+            t_lat = C_lat[i_h]
+            t_lon = C_lon[i_w]
+            t_btemp = C_BTemp[i_h,i_w]
+            if (calcdistance_km(I_lat[C_i], I_lon[C_i], t_lat, t_lon) <S_BOUND_KM) and (np.int(t_btemp)) < 230:
+                C_flag[i_h,i_w] = 1
+                print ('found at ' + str(i_w) + ' and ' + str(i_h))
     C_Core = C_flag[:]     
     
     #%% Start spreading
     I_idx = get_coord_to_idx(I_lat[C_i],I_lon[C_i])
-    C_binary = np.where(C_BTemp>270,0,C_BTemp)
+    C_binary = np.where(C_BTemp>280,0,C_BTemp)
     C_binary = np.where(C_binary>1,1,C_binary)
     C_binary_cut = np.zeros([DIM_LAT,DIM_LON])
-    r = 800 #the bounding box side = 2r
+    r = 500 #the bounding box side = 2r
     C_binary_cut[I_idx[0]-r:I_idx[0]+r,I_idx[1]-r:I_idx[1]+r] = C_binary[I_idx[0]-r:I_idx[0]+r,I_idx[1]-r:I_idx[1]+r] 
     C_binary8 = C_binary_cut.astype(np.uint8)
     
@@ -287,9 +273,10 @@ for C_i in range(0,1):
     max_idx  = [I_idx[0]-100 + max_idx_from_box[0],I_idx[1] - 100 + max_idx_from_box[1]] #idx in the image
     max_blob_value = blobs_labels[max_idx[0],max_idx[1]]
     
-    C_flag = np.where(blobs_labels == max_blob_value,2,0)
+    C_flag = np.where(blobs_labels == 1,2,0)
+#    C_flag = np.where(blobs_labels == 3,2,C_flag) #Manually select a blob
+#    C_flag = np.where(blobs_labels == 1,2,C_flag)
 #    C_flag = np.where(blobs_labels == 3,2,C_flag)
-    
      #%
     C_label_TC[C_i,:,:] = C_flag    
     #%
@@ -307,6 +294,7 @@ for C_i in range(0,1):
     # Prepare masks with NaN values
     C_mask_TC = np.where(C_flag == 0, np.NaN , C_flag)
     C_mask_Core = np.where(C_Core == 0, np.NaN , C_Core)
+    
     
     #%% Plot
     fig = plt.figure()
@@ -339,7 +327,39 @@ for C_i in range(0,1):
     # Best track center
     plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
     plt.show()    
-
+    
+    #%% Plot image
+    #flag_pos = np.where(c_flag==1)
+    C_mask_TC = np.where(C_flag == 0, np.NaN , C_flag)
+    C_mask_nonTC = np.where(C_flag_nonTC == 0, np.NaN , C_flag_nonTC)
+    C_mask_BG = np.where(C_flag_BG == 0, np.NaN , C_flag_BG)
+    #mask_pos = np.where(c_mask>0)
+    #c_Tb = Cdataset.Tb[C_i,:,:].values
+    
+    
+    #% plot IR image and the center point
+    fig = plt.figure()
+    lat_max = np.round(np.max(C_lat),1)
+    lat_min = np.round(np.min(C_lat),1)
+    lon_max = np.round(np.max(C_lon),1)
+    lon_min = np.round(np.min(C_lon),1)
+    filename = TC_serial+ "_" + I_name + "_" + time_to_string_with_min(I_year[C_i], I_month[C_i], I_day[C_i], I_hour[C_i], I_minute[C_i])
+    
+    #% Plot BT image with 3 labels
+    im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
+    im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
+#    im3 = plt.imshow(C_mask_nonTC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['red']),origin='lower',alpha=0.3)
+#    im4 = plt.imshow(C_mask_BG, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['blue']),origin='lower',alpha=0.3)
+    
+    # Best track center
+    plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
+        
+    ax = plt.gca()
+    ax.set_title(filename)
+    ax.set_xlabel('Longitude')
+    ax.set_ylabel('Latitude')
+    fig.savefig(SAVDIR + "\\" + filename +".png",dpi=200)
+    plt.close()
 
 
 #%% CLOSE HDF5 FILES
