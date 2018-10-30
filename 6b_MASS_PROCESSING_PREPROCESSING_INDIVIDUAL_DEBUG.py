@@ -117,7 +117,7 @@ B_TC_names = B_tracks['name'].values
 #TC_serial_list = ["2012147N30284","2012147N30284","2012169N29291","2012176N26272","2012223N14317","2012229N28305","2012234N16315","2012235N11328", "2012242N13333", "2012242N24317"]
 #for TC_i in range(0,len(TC_serial_list)):    
 #for TC_i in range(0,3): 
-TC_serial = "2012255N16322"
+TC_serial = "2012296N14283"
 for i,j in enumerate(B_TC_serials):
     if j.decode("utf-8") == TC_serial:
         I_TC_idx = i
@@ -177,7 +177,7 @@ S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
     ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     #%% WHOLE RUN
 #    for C_i in range(138,DIM_TIME):
-    for C_i in range(67,68):
+    for C_i in range(1,2):
         
         #% Acquire BT images
         C_label_TC[C_i,:,:] = np.zeros([DIM_LAT,DIM_LON])
@@ -292,7 +292,7 @@ S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
         elif volume_core > 15000 and volume_core < 30000:
             volume_ratio = 1.5
         elif volume_core > 30000 and volume_core < 90000:
-            volume_ratio = 0.5
+            volume_ratio = 0.3
         elif volume_core > 90000 and volume_core < 100000:
             volume_ratio = 0.2
         elif volume_core > 100000 :

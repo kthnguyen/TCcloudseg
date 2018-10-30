@@ -22,8 +22,8 @@ BTDIR = WORKPLACE + r"\2_IBTrACSfiles"
 RADDIR = WORKPLACE+ r"\6_CERESdata"
 
 
-TC_serial = '2012234N16315'
-I_i_max = 563
+TC_serial = '2012223N14317'
+#I_i_max = 443
 IMAG_RES = 4 #km
 DEG_TO_KM = 111 #ratio
 LAT_BOUND = [-20,60] #NA Basin
@@ -210,8 +210,8 @@ R_i_hour = [idx for idx,x in enumerate(R_hour) if x == no1_hour and (R_i_day.__c
 R_i_min = R_i_hour[0]
 
 #%
-#% FULL ANALYSIS
-#I_i_max = 191
+#%% FULL ANALYSIS
+I_i_max = 443
 rad_matrix_size = np.uint32((I_i_max - I_i_min)/2 + 1)
 mask_pc_sw = np.zeros(rad_matrix_size)
 mask_pc_lw = np.zeros(rad_matrix_size)
@@ -225,8 +225,8 @@ c_lat = BTempimage['lat'].values[DIM_BOUND[0]:DIM_BOUND[1]+1]
 c_lon = BTempimage['lon'].values[DIM_BOUND[2]:DIM_BOUND[3]+1]
 
 rad_matrix_idx = 0
-for I_i in range(I_i_min,I_i_max+2,2):
-#for I_i in range(I_i_min,3,2):
+#for I_i in range(I_i_min,I_i_max+2,2):
+for I_i in range(385,387,2):
     R_i = R_i_min + (I_i - I_i_min)
     
     c_flag = C_label_TC[I_i,:,:][:]
@@ -245,23 +245,17 @@ for I_i in range(I_i_min,I_i_max+2,2):
     #%
     mask_sw = 0
     mask_lw = 0
-    for CA_i in range(0, len(c_flag_pos_lat)-1):
+#    for CA_i in range(0, len(c_flag_pos_lat)-1):
+    for CA_i in range(6302, 6303):
         sel_lat = c_flag_pos_lat[CA_i]
         sel_lon = c_flag_pos_lon[CA_i]
-        # try catch to avoid edges
-        try:
-            sel_lat_idx = max(np.where((a_lat<sel_lat))[0])
-        except:
-            sel_lat_idx = min(np.where((a_lat>sel_lat))[0])
-        
-        try:    
-            sel_lon_idx = max(np.where((a_lon<sel_lon))[0])
-        except:
-            sel_lon_idx = min(np.where((a_lon>sel_lon))[0])
+        sel_lat_idx = max(np.where((a_lat<sel_lat))[0])
+        sel_lon_idx = max(np.where((a_lon<sel_lon))[0])
         sel_sw = a_sw[sel_lat_idx,sel_lon_idx]
         sel_lw = a_lw[sel_lat_idx,sel_lon_idx]
         mask_sw += sel_sw 
         mask_lw += sel_lw
+        print (str(CA_i))
     
     sum_sw = sum1(a_sw)
     sum_lw = sum1(a_lw)
@@ -276,7 +270,7 @@ for I_i in range(I_i_min,I_i_max+2,2):
     print(str(I_time_interpolate['time'].values[I_i]) + " done")
 
 #%
-#% Overall
+#%% Overall
 
     
 mask_pc_sw_dur = (sum(mask_sw_dur)*16)/(sum(sum_sw_dur)*12321)
