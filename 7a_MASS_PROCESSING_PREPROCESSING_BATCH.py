@@ -22,7 +22,7 @@ from skimage.morphology import reconstruction
 from scipy.spatial.distance import cdist
 
 WORKPLACE = r"C:\Users\z3439910\Documents\Kien\1_Projects\2_Msc\1_E1\5_GIS_project"
-IRDIR = WORKPLACE + r"\IRimages2012"
+IRDIR = WORKPLACE + r"\IRimages2013"
 BTDIR = WORKPLACE + r"\2_IBTrACSfiles"
 os.chdir(IRDIR)
 
@@ -110,72 +110,70 @@ DIM_BOUND = get_BTempimage_bound(LAT_BOUND[0],LAT_BOUND[1],LON_BOUND[0],LON_BOUN
 
 #%% Best track for a particular storm based on its serial
 # get TC estimated centers
-B_tracks = xr.open_dataset(BTDIR+"\\"+"Year.2012.ibtracs_all.v03r10.nc")
+B_tracks = xr.open_dataset(BTDIR+"\\"+"Year.2013.ibtracs_all.v03r10.nc")
 B_TC_serials = B_tracks['storm_sn'].values
 B_TC_names = B_tracks['name'].values
 
-#TC_serial_list = ["2012147N30284","2012147N30284","2012169N29291","2012176N26272","2012223N14317","2012229N28305","2012234N16315","2012235N11328", "2012242N13333", "2012242N24317"]
-#for TC_i in range(0,len(TC_serial_list)):    
+TC_serial_list = ["2013204N11340","2013227N14337","2013238N19266","2013248N16294","2013250N22263","2013251N13342","2013271N21310","2013276N22273","2013294N28304"]
+for TC_i in range(0,len(TC_serial_list)):    
 #for TC_i in range(0,3): 
-TC_serial = "2012296N14283"
-for i,j in enumerate(B_TC_serials):
-    if j.decode("utf-8") == TC_serial:
-        I_TC_idx = i
-## extract variables into arrays
-I_name = B_TC_names[I_TC_idx].decode("utf-8")
-I_TC_time = B_tracks['source_time'].values[I_TC_idx,:]
-I_TC_time = pd.DataFrame(I_TC_time).dropna().values[:,0]
-print ("Starting processing TC " + I_name)
-
-
-I_lat = B_tracks['lat_for_mapping'].values[I_TC_idx,:]
-I_lat = pd.DataFrame(I_lat).dropna().values[:,0]
-I_lon = B_tracks['lon_for_mapping'].values[I_TC_idx,:]
-I_lon = pd.DataFrame(I_lon).dropna().values[:,0]
-
-# interpolate best track lat long to 0.5-hour intervals
-df = pd.DataFrame({'time':I_TC_time,'lat':I_lat,'lon':I_lon})
-df = df.set_index('time')
-df_reindexed = df.reindex(pd.date_range(start=I_TC_time[0],end=I_TC_time[len(I_TC_time)-1],freq='0.5H'))
-I_time_interpolate = df_reindexed.interpolate(method='time')
-I_time_interpolate.index.name = 'time'
-I_time_interpolate.reset_index(inplace = True)
-I_year = pd.to_datetime(I_time_interpolate['time'].values).year
-I_month = pd.to_datetime(I_time_interpolate['time'].values).month
-I_day = pd.to_datetime(I_time_interpolate['time'].values).day
-I_hour = pd.to_datetime(I_time_interpolate['time'].values).hour
-I_minute = pd.to_datetime(I_time_interpolate['time'].values).minute
-I_lat = I_time_interpolate['lat']
-I_lon = I_time_interpolate['lon']
-
-SAVDIR = WORKPLACE + r"\3_Figures\\" + TC_serial + "_" + I_name
-
-DIM_LAT = DIM_BOUND[1]-DIM_BOUND[0] + 1
-DIM_LON = DIM_BOUND[3]-DIM_BOUND[2] + 1
-DIM_TIME = np.shape(I_time_interpolate['time'])[0]
-
-##%% Start spreading 
-# open the label HDF5 file
-HFILE_DIR = SAVDIR + r"\\" + TC_serial + r"_" + I_name + r'_labels.h5'
-Hfile_label = h5py.File(HFILE_DIR,'r+')  
-C_label_TC = Hfile_label['label_TC']
-C_label_BG = Hfile_label['label_BG']
-C_label_nonTC = Hfile_label['label_nonTC']
-
-# define some variables
-TB_THRES = 280
-start_time_overall = time.time()
-# define search boundry
-S_BOUND_KM = 300 #km
-S_BOUND_DEG = S_BOUND_KM/111 #convert km to deg
-S_NO_PX = np.round(S_BOUND_KM/IMAG_RES)
-
-S_BOUND_TOT_KM = 1110 #km
-S_BOUND_TOT_DEG = S_BOUND_TOT_KM/111 #convert km to deg
-S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES) 
+    TC_serial = TC_serial_list[TC_i]
+    for i,j in enumerate(B_TC_serials):
+        if j.decode("utf-8") == TC_serial:
+            I_TC_idx = i
+    ## extract variables into arrays
+    I_name = B_TC_names[I_TC_idx].decode("utf-8")
+    I_TC_time = B_tracks['source_time'].values[I_TC_idx,:]
+    I_TC_time = pd.DataFrame(I_TC_time).dropna().values[:,0]
+    print ("Starting processing TC " + I_name)
+    
+    
+    I_lat = B_tracks['lat_for_mapping'].values[I_TC_idx,:]
+    I_lat = pd.DataFrame(I_lat).dropna().values[:,0]
+    I_lon = B_tracks['lon_for_mapping'].values[I_TC_idx,:]
+    I_lon = pd.DataFrame(I_lon).dropna().values[:,0]
+    
+    # interpolate best track lat long to 0.5-hour intervals
+    df = pd.DataFrame({'time':I_TC_time,'lat':I_lat,'lon':I_lon})
+    df = df.set_index('time')
+    df_reindexed = df.reindex(pd.date_range(start=I_TC_time[0],end=I_TC_time[len(I_TC_time)-1],freq='0.5H'))
+    I_time_interpolate = df_reindexed.interpolate(method='time')
+    I_time_interpolate.index.name = 'time'
+    I_time_interpolate.reset_index(inplace = True)
+    I_year = pd.to_datetime(I_time_interpolate['time'].values).year
+    I_month = pd.to_datetime(I_time_interpolate['time'].values).month
+    I_day = pd.to_datetime(I_time_interpolate['time'].values).day
+    I_hour = pd.to_datetime(I_time_interpolate['time'].values).hour
+    I_minute = pd.to_datetime(I_time_interpolate['time'].values).minute
+    I_lat = I_time_interpolate['lat']
+    I_lon = I_time_interpolate['lon']
+    
+    SAVDIR = WORKPLACE + r"\3_Figures\\" + TC_serial + "_" + I_name
+    
+    DIM_LAT = DIM_BOUND[1]-DIM_BOUND[0] + 1
+    DIM_LON = DIM_BOUND[3]-DIM_BOUND[2] + 1
+    DIM_TIME = np.shape(I_time_interpolate['time'])[0]
+    
+    ##%% Start spreading 
+    # open the label HDF5 file
+    HFILE_DIR = SAVDIR + r"\\" + TC_serial + r"_" + I_name + r'_labels.h5'
+    Hfile_label = h5py.File(HFILE_DIR,'r+')  
+    C_label_TC = Hfile_label['label_TC']
+    
+    # define some variables
+    TB_THRES = 280
+    start_time_overall = time.time()
+    # define search boundry
+    S_BOUND_KM = 300 #km
+    S_BOUND_DEG = S_BOUND_KM/111 #convert km to deg
+    S_NO_PX = np.round(S_BOUND_KM/IMAG_RES)
+    
+    S_BOUND_TOT_KM = 1110 #km
+    S_BOUND_TOT_DEG = S_BOUND_TOT_KM/111 #convert km to deg
+    S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES) 
     
     ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    #%% WHOLE RUN
+    #% WHOLE RUN
     for C_i in range(1,DIM_TIME):
 #    for C_i in range(44,45):
         
@@ -209,10 +207,25 @@ S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
         C_flag = C_label_TC[C_i,:,:][:]
         C_flag_temp = C_label_TC[C_i,:,:][:]
         
+        # calculate how much the BT center is shifted
         I_idx_prev = get_coord_to_idx(I_lat[C_i-1],I_lon[C_i-1])
         I_idx = get_coord_to_idx(I_lat[C_i],I_lon[C_i])
+        laty_shift = I_idx[0] - I_idx_prev[0]
+        lonx_shift = I_idx[1] - I_idx_prev[1]
+        
+        
+        # shift the previous mask accordingly
+        C_flag_prev_idx = np.where(C_flag_prev>0)
+        laty_prev_idx = C_flag_prev_idx[0]
+        lonx_prev_idx = C_flag_prev_idx[1]
+        laty_current_idx = C_flag_prev_idx[0] + laty_shift
+        lonx_current_idx = C_flag_prev_idx[1] + lonx_shift
+        C_flag_temp[laty_current_idx, lonx_current_idx] = 2
+        
+
 #        C_flag_temp [I_idx[0]-r:I_idx[0]+r,I_idx[1]-r:I_idx[1]+r] = C_flag_prev[I_idx_prev[0]-r:I_idx_prev[0]+r,I_idx_prev[1]-r:I_idx_prev[1]+r] 
-        C_flag_temp = C_flag_prev
+#        C_flag_temp = C_flag_prev
+        # eliminate all value from the previous mask now become > 280
         C_flag_core = np.where(C_BTemp > 280, 0,C_flag_temp)
         C_flag_core = C_flag_core.astype(np.uint8)
         blobs_labels_core = measure.label(C_flag_core,neighbors=4, background=0)
@@ -279,7 +292,7 @@ S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
         elif volume_core > 15000 and volume_core < 30000:
             volume_ratio = 1.5
         elif volume_core > 30000 and volume_core < 90000:
-            volume_ratio = 1
+            volume_ratio = 0.3
         elif volume_core > 90000 and volume_core < 120000:
             volume_ratio = 0.2
         elif volume_core > 120000 :
@@ -290,77 +303,12 @@ S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
                 volume_label = np.count_nonzero(blobs_labels_compared==label_i)   
                 if volume_label < volume_core*volume_ratio:
                     C_flag = np.where(blobs_labels_compared==label_i,C_flag_overflow,C_flag)
-#        #%% PLOT RESULTS
-#        # Prepare masks with NaN values
-#        C_mask_TC = np.where(C_flag == 0, np.NaN , C_flag)
-##        C_mask_Core = np.where(C_Core == 0, np.NaN , C_Core)
-#        C_mask_TC_temp = np.where(C_flag_core == 0, np.NaN , C_flag_temp)
-#        C_mask_TC_compared = np.where(C_flag_compared == 0, np.NaN , C_flag_temp)
-#        # Plot
-#        fig = plt.figure()
-#        lat_max = np.round(np.max(C_lat),1)
-#        lat_min = np.round(np.min(C_lat),1)
-#        lon_max = np.round(np.max(C_lon),1)
-#        lon_min = np.round(np.min(C_lon),1)
-#        filename = TC_serial+ "_" + I_name + "_" + time_to_string_with_min(I_year[C_i], I_month[C_i], I_day[C_i], I_hour[C_i], I_minute[C_i])
-#        
-#        
-#        plt.subplot(231)
-#        #% Plot BT image with 3 labels
-#        im = plt.imshow(C_binary8, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys_r',origin='lower')
-#        # Best track center
-#        plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
-#        
-#        plt.subplot(232)
-#        #% Plot BT image with 3 labels
-#        im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
-#        im2 = plt.imshow(C_mask_TC_compared, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
-##        im2 = plt.imshow(C_mask_Core, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['green']),origin='lower',alpha=0.3)
-#        
-#        plt.subplot(233)
-#        
-#        im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
-#        im2 = plt.imshow(C_mask_TC_temp, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
-##        im2 = plt.imshow(C_mask_Core, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['green']),origin='lower',alpha=0.3)
-#    
-#    #    im = plt.imshow(blobs_labels, extent = (lon_min, lon_max, lat_min, lat_max),  cmap=plt.cm.nipy_spectral,interpolation='nearest',origin='lower')
-#        plt.subplot(234)
-#    
-#        im = plt.imshow(C_BTemp,   cmap='Greys',origin='lower')
-#        im2 = plt.imshow(C_mask_TC,  cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
-##        im2 = plt.imshow(C_mask_Core, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['green']),origin='lower',alpha=0.3)
-#        # Best track center
-#        plt.plot(I_idx[1],I_idx[0],'or', markersize = 2)  
-#        
-#        plt.subplot(235)
-#        im = plt.imshow(blobs_labels_core, extent = (lon_min, lon_max, lat_min, lat_max),  cmap=plt.cm.nipy_spectral,interpolation='nearest',origin='lower')
-#        
-#        plt.subplot(236)
-##        im = plt.imshow(props_coords_list, extent = (lon_min, lon_max, lat_min, lat_max),  cmap=plt.cm.nipy_spectral,interpolation='nearest',origin='lower')
-#
-#        plt.show() 
     
         #%
-        C_label_TC[C_i,:,:] = C_flag    
-        #%
-        C_flag_BG = np.where(C_BTemp<280,0,C_BTemp)
-        C_flag_BG = np.where(C_flag_BG>0,4,C_flag_BG)
-        C_flag_nonTC = np.zeros([DIM_LAT,DIM_LON])
-        C_flag_nonTC = np.where(C_flag_BG < 4,3,C_flag_nonTC)
-        C_flag_nonTC = np.where(C_flag >0,0,C_flag_nonTC)
-        #im2 = plt.imshow(a, cmap='Greys',origin='lower',alpha=0.4)
-        
-        C_label_TC[C_i,:,:] = C_flag #flag=2
-        C_label_nonTC[C_i,:,:] = C_flag_nonTC #flag=3
-        C_label_BG[C_i,:,:] = C_flag_BG #flag=4
+        C_label_TC[C_i,:,:] = C_flag.astype(np.uint8)  
         
         #% Plot image
-        #flag_pos = np.where(c_flag==1)
         C_mask_TC = np.where(C_flag == 0, np.NaN , C_flag)
-        C_mask_nonTC = np.where(C_flag_nonTC == 0, np.NaN , C_flag_nonTC)
-        C_mask_BG = np.where(C_flag_BG == 0, np.NaN , C_flag_BG)
-        #mask_pos = np.where(c_mask>0)
-        #c_Tb = Cdataset.Tb[C_i,:,:].values
         
         
         #% plot IR image and the center point
@@ -374,9 +322,7 @@ S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
         #% Plot BT image with 3 labels
         im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
         im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
-#        im3 = plt.imshow(C_mask_nonTC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['red']),origin='lower',alpha=0.3)
-#        im4 = plt.imshow(C_mask_BG, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['blue']),origin='lower',alpha=0.3)
-        
+       
         # Best track center
         plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
             

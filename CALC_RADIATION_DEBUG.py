@@ -249,8 +249,16 @@ for I_i in range(385,387,2):
     for CA_i in range(6302, 6303):
         sel_lat = c_flag_pos_lat[CA_i]
         sel_lon = c_flag_pos_lon[CA_i]
-        sel_lat_idx = max(np.where((a_lat<sel_lat))[0])
-        sel_lon_idx = max(np.where((a_lon<sel_lon))[0])
+        # try catch to avoid edges
+        try:
+            sel_lat_idx = max(np.where((a_lat<sel_lat))[0])
+        except:
+            sel_lat_idx = min(np.where((a_lat>sel_lat))[0])
+        
+        try:    
+            sel_lon_idx = max(np.where((a_lon<sel_lon))[0])
+        except:
+            sel_lon_idx = min(np.where((a_lon>sel_lon))[0])
         sel_sw = a_sw[sel_lat_idx,sel_lon_idx]
         sel_lw = a_lw[sel_lat_idx,sel_lon_idx]
         mask_sw += sel_sw 

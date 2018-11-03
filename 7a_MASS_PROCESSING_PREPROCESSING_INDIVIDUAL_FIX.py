@@ -117,7 +117,7 @@ B_TC_names = B_tracks['name'].values
 #TC_serial_list = ["2012147N30284","2012147N30284","2012169N29291","2012176N26272","2012223N14317","2012229N28305","2012234N16315","2012235N11328", "2012242N13333", "2012242N24317"]
 #for TC_i in range(0,len(TC_serial_list)):    
 #for TC_i in range(0,3): 
-TC_serial = "2012296N14283"
+TC_serial = "2012285N26288"
 for i,j in enumerate(B_TC_serials):
     if j.decode("utf-8") == TC_serial:
         I_TC_idx = i
@@ -209,10 +209,25 @@ S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
         C_flag = C_label_TC[C_i,:,:][:]
         C_flag_temp = C_label_TC[C_i,:,:][:]
         
+        # calculate how much the BT center is shifted
         I_idx_prev = get_coord_to_idx(I_lat[C_i-1],I_lon[C_i-1])
         I_idx = get_coord_to_idx(I_lat[C_i],I_lon[C_i])
+        laty_shift = I_idx[0] - I_idx_prev[0]
+        lonx_shift = I_idx[1] - I_idx_prev[1]
+        
+        
+        # shift the previous mask accordingly
+        C_flag_prev_idx = np.where(C_flag_prev>0)
+        laty_prev_idx = C_flag_prev_idx[0]
+        lonx_prev_idx = C_flag_prev_idx[1]
+        laty_current_idx = C_flag_prev_idx[0] + laty_shift
+        lonx_current_idx = C_flag_prev_idx[1] + lonx_shift
+        C_flag_temp[laty_current_idx, lonx_current_idx] = 2
+        
+
 #        C_flag_temp [I_idx[0]-r:I_idx[0]+r,I_idx[1]-r:I_idx[1]+r] = C_flag_prev[I_idx_prev[0]-r:I_idx_prev[0]+r,I_idx_prev[1]-r:I_idx_prev[1]+r] 
-        C_flag_temp = C_flag_prev
+#        C_flag_temp = C_flag_prev
+        # eliminate all value from the previous mask now become > 280
         C_flag_core = np.where(C_BTemp > 280, 0,C_flag_temp)
         C_flag_core = C_flag_core.astype(np.uint8)
         blobs_labels_core = measure.label(C_flag_core,neighbors=4, background=0)
@@ -279,7 +294,7 @@ S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
         elif volume_core > 15000 and volume_core < 30000:
             volume_ratio = 1.5
         elif volume_core > 30000 and volume_core < 90000:
-            volume_ratio = 1
+            volume_ratio = 0.3
         elif volume_core > 90000 and volume_core < 120000:
             volume_ratio = 0.2
         elif volume_core > 120000 :

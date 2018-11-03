@@ -22,8 +22,8 @@ BTDIR = WORKPLACE + r"\2_IBTrACSfiles"
 RADDIR = WORKPLACE+ r"\6_CERESdata"
 
 
-TC_serial = '2012234N16315'
-I_i_max = 563
+TC_serial = '2012296N14283'
+I_i_max = 467
 IMAG_RES = 4 #km
 DEG_TO_KM = 111 #ratio
 LAT_BOUND = [-20,60] #NA Basin
