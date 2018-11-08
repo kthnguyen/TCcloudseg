@@ -124,7 +124,7 @@ B_TC_names = B_tracks['name'].values
 #TC_serial_list = ["2012147N30284","2012147N30284","2012169N29291","2012176N26272","2012223N14317","2012229N28305","2012234N16315","2012235N11328", "2012242N13333", "2012242N24317"]
 #for TC_i in range(0,len(TC_serial_list)):    
 #for TC_i in range(0,3): 
-TC_serial = "2013189N09319"
+TC_serial = "2013248N16294"
 for i,j in enumerate(B_TC_serials):
     if j.decode("utf-8") == TC_serial:
         I_TC_idx = i
@@ -181,7 +181,7 @@ S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
     
     ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     #%% WHOLE RUN
-    for C_i in range(1,DIM_TIME):
+    for C_i in range(4,5):
 #    for C_i in range(44,45):
         
         #% Acquire BT images
@@ -310,7 +310,7 @@ S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
                 volume_label = np.count_nonzero(blobs_labels_compared==label_i)   
                 if volume_label < volume_core*volume_ratio:
                     C_flag = np.where(blobs_labels_compared==label_i,C_flag_overflow,C_flag)
-    
+#        C_flag = np.where(blobs_labels_compared==1,C_flag_overflow,C_flag)
         #%
         C_label_TC[C_i,:,:] = C_flag.astype(np.uint8)  
         

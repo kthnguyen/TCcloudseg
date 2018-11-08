@@ -22,7 +22,7 @@ from skimage.morphology import reconstruction
 from scipy.spatial.distance import cdist
 
 WORKPLACE = r"C:\Users\z3439910\Documents\Kien\1_Projects\2_Msc\1_E1\5_GIS_project"
-IRDIR = WORKPLACE + r"\IRimages2013"
+IRDIR = WORKPLACE + r"\IRimages2012"
 BTDIR = WORKPLACE + r"\2_IBTrACSfiles"
 os.chdir(IRDIR)
 
@@ -110,14 +110,14 @@ DIM_BOUND = get_BTempimage_bound(LAT_BOUND[0],LAT_BOUND[1],LON_BOUND[0],LON_BOUN
 
 #%% Best track for a particular storm based on its serial
 # get TC estimated centers
-B_tracks = xr.open_dataset(BTDIR+"\\"+"Year.2013.ibtracs_all.v03r10.nc")
+B_tracks = xr.open_dataset(BTDIR+"\\"+"Year.2012.ibtracs_all.v03r10.nc")
 B_TC_serials = B_tracks['storm_sn'].values
 B_TC_names = B_tracks['name'].values
 
 #TC_serial_list = ["2012147N30284","2012147N30284","2012169N29291","2012176N26272","2012223N14317","2012229N28305","2012234N16315","2012235N11328", "2012242N13333", "2012242N24317"]
 #for TC_i in range(0,len(TC_serial_list)):    
 #for TC_i in range(0,3): 
-TC_serial = "2013189N09319"
+TC_serial = "2012215N12313"
 for i,j in enumerate(B_TC_serials):
     if j.decode("utf-8") == TC_serial:
         I_TC_idx = i
@@ -148,7 +148,7 @@ I_minute = pd.to_datetime(I_time_interpolate['time'].values).minute
 I_lat = I_time_interpolate['lat']
 I_lon = I_time_interpolate['lon']
 
-SAVDIR = WORKPLACE + r"\3_Figures\\" + TC_serial + "_" + I_name
+SAVDIR = WORKPLACE + r"\3_Figures\\" + TC_serial + "_" + I_name + "_DEMO"
 
 DIM_LAT = DIM_BOUND[1]-DIM_BOUND[0] + 1
 DIM_LON = DIM_BOUND[3]-DIM_BOUND[2] + 1
@@ -174,7 +174,7 @@ S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
     
     ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     #%% WHOLE RUN
-    for C_i in range(5,DIM_TIME):
+    for C_i in range(1,2):
 #    for C_i in range(44,45):
         
         #% Acquire BT images
@@ -309,9 +309,16 @@ S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
         
         #% Plot image
         C_mask_TC = np.where(C_flag == 0, np.NaN , C_flag)
+                 #%% PLOT RESULTS
+        # Prepare masks with NaN values
+        C_mask_TC = np.where(C_flag == 0, np.NaN , C_flag)
+#        C_mask_Core = np.where(C_Core == 0, np.NaN , C_Core)
+        C_mask_TC_core = np.where(C_flag_core == 0, np.NaN , C_flag_temp)
+        C_mask_TC_prev = np.where(C_flag_prev == 0, np.NaN , C_flag_temp)
+        C_mask_TC_overflow = np.where(C_flag_overflow == 0, np.NaN , C_flag_temp)
         
-        
-        #% plot IR image and the center point
+        C_mask_TC_compared = np.where(C_flag_compared == 0, np.NaN , C_flag_temp)
+        # Plot
         fig = plt.figure()
         lat_max = np.round(np.max(C_lat),1)
         lat_min = np.round(np.min(C_lat),1)
@@ -319,23 +326,181 @@ S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
         lon_min = np.round(np.min(C_lon),1)
         filename = TC_serial+ "_" + I_name + "_" + time_to_string_with_min(I_year[C_i], I_month[C_i], I_day[C_i], I_hour[C_i], I_minute[C_i])
         
+        
+        plt.subplot(331)
         #% Plot BT image with 3 labels
-        im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
-        im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
-       
+        im = plt.imshow(C_binary8, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys_r',origin='lower')
         # Best track center
         plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
-            
         ax = plt.gca()
-        ax.set_title(filename)
-        ax.set_xlabel('Longitude')
-        ax.set_ylabel('Latitude')
-        fig.savefig(SAVDIR + "\\" + filename +".png",dpi=200)
-        plt.close()
+        ax.set_title("Less than 280K")
         
-#        print(filename + " done")
-    #    plt.show()            
-    #%
+        plt.subplot(332)
+        #% Plot BT image with 3 labels
+        im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
+        im2 = plt.imshow(C_mask_TC_prev, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
+#        im2 = plt.imshow(C_mask_Core, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['green']),origin='lower',alpha=0.3)
+        plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
+        ax = plt.gca()
+        ax.set_title("Previous mask")
+        
+        plt.subplot(333)
+        im = plt.imshow(blobs_labels_core, extent = (lon_min, lon_max, lat_min, lat_max),  cmap=plt.cm.nipy_spectral,interpolation='nearest',origin='lower')
+        ax = plt.gca()
+        ax.set_title("Blobs of the previous mask")
+        
+        plt.subplot(334)
+        im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
+        im2 = plt.imshow(C_mask_TC_core, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
+#        im2 = plt.imshow(C_mask_Core, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['green']),origin='lower',alpha=0.3)
+    
+    #    im = plt.imshow(blobs_labels, extent = (lon_min, lon_max, lat_min, lat_max),  cmap=plt.cm.nipy_spectral,interpolation='nearest',origin='lower')
+        ax = plt.gca()
+        ax.set_title("The mask core from the previous mask")    
+        
+        plt.subplot(335)
+        im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
+        im = plt.imshow(C_mask_TC_overflow, extent = (lon_min, lon_max, lat_min, lat_max),  cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
+        plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2)  
+        ax = plt.gca()
+        ax.set_title("Overflow mask")
+        
+        plt.subplot(336)
+        im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
+        im = plt.imshow(C_mask_TC_compared, extent = (lon_min, lon_max, lat_min, lat_max),  cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
+        plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
+        ax = plt.gca()
+        ax.set_title("Mask to compared")
+    
+        plt.subplot(337)
+        im = plt.imshow(blobs_labels_compared, extent = (lon_min, lon_max, lat_min, lat_max),  cmap=plt.cm.nipy_spectral,interpolation='nearest',origin='lower')
+        ax = plt.gca()
+        ax.set_title("Blob of the compared mask") 
+        
+        plt.subplot(338)
+        im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
+        im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
+        plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2)  
+        ax = plt.gca()
+        ax.set_title("Final results")
+        
+
+        plt.show() 
+        
+        #%%
+        fig = plt.figure()
+        csfont_tick = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 28}
+        csfont_ax = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 30}
+        im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
+        im = plt.imshow(C_mask_TC_overflow, extent = (lon_min, lon_max, lat_min, lat_max),  cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
+        axes = plt.gca()
+        axes.set_xlim([-85,-40])
+        axes.set_ylim([-20,25])
+        plt.xlabel('Longitudes',**csfont_ax)
+        plt.ylabel('Latitudes',**csfont_ax)
+        a = plt.gca()
+        a.set_xticklabels(a.get_xticks(), **csfont_tick)
+        a.set_yticklabels(a.get_yticks(), **csfont_tick)
+        plt.locator_params(axis='y', nbins=4)
+        plt.locator_params(axis='x', nbins=4)
+        fig.set_tight_layout({"pad": .0})
+        plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 5) 
+        
+#        fig.savefig(SAVDIR + "\\" + "1_a" +".png",dpi=200)
+#        plt.close()
+        plt.show() 
+#%%
+#%
+        from matplotlib.ticker import FormatStrFormatter
+        fig = plt.figure()
+        csfont_tick = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 28}
+        csfont_ax = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 30}
+        im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
+        im = plt.imshow(C_mask_TC_overflow, extent = (lon_min, lon_max, lat_min, lat_max),  cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
+        axes = plt.gca()
+        xmin = -85
+        xmax = -40
+        ymin = -20
+        ymax = 25
+        axes.set_xlim([xmin,xmax])
+        axes.set_ylim([ymin,ymax])
+        plt.xlabel('Longitudes',**csfont_ax)
+        plt.ylabel('Latitudes',**csfont_ax)
+        a = plt.gca()
+        a.set_xticklabels(a.get_xticks(), **csfont_tick)
+        a.set_yticklabels(a.get_yticks(), **csfont_tick)
+        plt.xticks(np.arange(xmin, xmax, 10.0))
+        plt.yticks(np.arange(ymin, ymax, 10.0))
+        fig.set_tight_layout({"pad": .0})
+        plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 5) 
+        a.yaxis.set_major_formatter(FormatStrFormatter('%g'))
+        a.xaxis.set_major_formatter(FormatStrFormatter('%g'))
+        fig.savefig(SAVDIR + "\\" + "2_a" +".png",dpi=200)
+    #    ax.yaxis.set_major_formatter(FormatStrFormatter('%g'))
+        plt.close()
+    #    plt.show()     
+
+#%%
+        fig = plt.figure()
+        csfont_tick = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 28}
+        csfont_ax = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 30}
+        
+#        cmap=plt.cm.nipy_spectral
+        blobs_labels_compared_plot = np.where(blobs_labels_compared==1,1,np.NaN)
+        im = plt.imshow(blobs_labels_compared, extent = (lon_min, lon_max, lat_min, lat_max),  cmap=plt.cm.nipy_spectral,interpolation='nearest',origin='lower')
+        im = plt.imshow(blobs_labels_compared_plot, extent = (lon_min, lon_max, lat_min, lat_max),  cmap=colors.ListedColormap(['blue']),origin='lower')
+
+        axes = plt.gca()
+        xmin = -85
+        xmax = -40
+        ymin = -20
+        ymax = 25
+        axes.set_xlim([xmin,xmax])
+        axes.set_ylim([ymin,ymax])
+#        plt.xlabel('Longitudes',**csfont_ax)
+#        plt.ylabel('Latitudes',**csfont_ax)
+        a = plt.gca()
+        a.set_xticklabels(a.get_xticks(), **csfont_tick)
+        a.set_yticklabels(a.get_yticks(), **csfont_tick)
+        plt.xticks(np.arange(xmin, xmax, 10.0))
+        plt.yticks(np.arange(ymin, ymax, 10.0))
+        fig.set_tight_layout({"pad": .0})
+        plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 5) 
+        a.yaxis.set_major_formatter(FormatStrFormatter('%g'))
+        a.xaxis.set_major_formatter(FormatStrFormatter('%g'))
+        fig.savefig(SAVDIR + "\\" + "2_b" +".png",dpi=200)
+        plt.close()
+#        plt.show() 
+        #%%
+        from matplotlib.ticker import FormatStrFormatter
+        fig = plt.figure()
+        csfont_tick = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 28}
+        csfont_ax = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 30}
+        im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
+        im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
+        axes = plt.gca()
+        xmin = -85
+        xmax = -40
+        ymin = -20
+        ymax = 25
+        axes.set_xlim([xmin,xmax])
+        axes.set_ylim([ymin,ymax])
+#        plt.xlabel('Longitudes',**csfont_ax)
+#        plt.ylabel('Latitudes',**csfont_ax)
+        a = plt.gca()
+        a.set_xticklabels(a.get_xticks(), **csfont_tick)
+        a.set_yticklabels(a.get_yticks(), **csfont_tick)
+        plt.xticks(np.arange(xmin, xmax, 10.0))
+        plt.yticks(np.arange(ymin, ymax, 10.0))
+        fig.set_tight_layout({"pad": .0})
+        plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 5) 
+        a.yaxis.set_major_formatter(FormatStrFormatter('%g'))
+        a.xaxis.set_major_formatter(FormatStrFormatter('%g'))
+        fig.savefig(SAVDIR + "\\" + "2_c" +".png",dpi=200)
+    #    ax.yaxis.set_major_formatter(FormatStrFormatter('%g'))
+        plt.close()
+    #    plt.show() 
+    #%%
     elapsed_time_overall = time.time() - start_time_overall
     print ('Cloud extraction for all done in ' +  time.strftime("%H:%M:%S", time.gmtime(elapsed_time_overall)))
     

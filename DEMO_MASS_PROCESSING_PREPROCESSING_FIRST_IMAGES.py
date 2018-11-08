@@ -21,12 +21,12 @@ from skimage.feature import peak_local_max
 from skimage.morphology import reconstruction
 
 WORKPLACE = r"C:\Users\z3439910\Documents\Kien\1_Projects\2_Msc\1_E1\5_GIS_project"
-IRDIR = WORKPLACE + r"\IRimages2013"
+IRDIR = WORKPLACE + r"\IRimages2012"
 BTDIR = WORKPLACE + r"\2_IBTrACSfiles"
 os.chdir(IRDIR)
 
 #% CONSTANT
-TC_serial = '2013321N24308'
+TC_serial = '2012215N12313'
 IMAG_RES = 4 #km
 DEG_TO_KM = 111 #ratio
 LAT_BOUND = [-20,60] #NA Basin
@@ -105,13 +105,13 @@ def get_BTempimage_bound(latmin,latmax,lonmin,lonmax):
     lon_bound = [i for i,val in enumerate(BTemp_lon) if (val>lonmin and val<lonmax)]   
     lon_val_bound = [val for i,val in enumerate(BTemp_lon) if (val>lonmin and val<lonmax)] 
     return[lat_bound[0],lat_bound[-1],lon_bound[0],lon_bound[-1]]
-#% Get idices in accordance with brightness temperature images
+#%% Get idices in accordance with brightness temperature images
 
 DIM_BOUND = get_BTempimage_bound(LAT_BOUND[0],LAT_BOUND[1],LON_BOUND[0],LON_BOUND[1])#incices from BT images
 
 #% Best track for a particular storm based on its serial
 # get TC estimated centers
-B_tracks = xr.open_dataset(BTDIR+"\\"+"Year.2013.ibtracs_all.v03r10.nc")
+B_tracks = xr.open_dataset(BTDIR+"\\"+"Year.2012.ibtracs_all.v03r10.nc")
 
 B_TC_serials = B_tracks['storm_sn'].values
 B_TC_names = B_tracks['name'].values
@@ -146,7 +146,7 @@ I_minute = pd.to_datetime(I_time_interpolate['time'].values).minute
 I_lat = I_time_interpolate['lat']
 I_lon = I_time_interpolate['lon']
 
-SAVDIR = WORKPLACE + r"\3_Figures\\" + TC_serial + "_" + I_name
+SAVDIR = WORKPLACE + r"\3_Figures\\" + TC_serial + "_" + I_name + "_DEMO"
 os.mkdir(SAVDIR)
 
 #% Create an HDF5 file to store label for the current storm
@@ -181,7 +181,7 @@ S_BOUND_TOT_KM = 1110 #km
 S_BOUND_TOT_DEG = S_BOUND_TOT_KM/111 #convert km to deg
 S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
 #%% FIRST FRAME
-for C_i in range(221,222):
+for C_i in range(0,1):
     
     #% Acquire BT images
     C_label_TC[C_i,:,:] = np.zeros([DIM_LAT,DIM_LON])
@@ -209,20 +209,20 @@ for C_i in range(221,222):
     C_flag = C_label_TC[C_i,:,:][:]
     C_flag = np.zeros([DIM_LAT,DIM_LON])
     # first image
-#    if C_i == 0:    
+    if C_i == 0:    
         
-    box_i_w = [i_w for i_w,x_w in enumerate(C_lon) if abs(I_lon[C_i]-x_w) < S_BOUND_DEG]
-    box_i_h = [i_h for i_h,x_h in enumerate(C_lat) if abs(I_lat[C_i]-x_h) < S_BOUND_DEG]
-    
-    #
-    for i_w in box_i_w:
-        for i_h in box_i_h:
-            t_lat = C_lat[i_h]
-            t_lon = C_lon[i_w]
-            t_btemp = C_BTemp[i_h,i_w]
-            if (calcdistance_km(I_lat[C_i], I_lon[C_i], t_lat, t_lon) <S_BOUND_KM) and (np.int(t_btemp)) < 230:
-                C_flag[i_h,i_w] = 1
-                print ('found at ' + str(i_w) + ' and ' + str(i_h))
+        box_i_w = [i_w for i_w,x_w in enumerate(C_lon) if abs(I_lon[C_i]-x_w) < S_BOUND_DEG]
+        box_i_h = [i_h for i_h,x_h in enumerate(C_lat) if abs(I_lat[C_i]-x_h) < S_BOUND_DEG]
+        
+        #
+        for i_w in box_i_w:
+            for i_h in box_i_h:
+                t_lat = C_lat[i_h]
+                t_lon = C_lon[i_w]
+                t_btemp = C_BTemp[i_h,i_w]
+                if (calcdistance_km(I_lat[C_i], I_lon[C_i], t_lat, t_lon) <S_BOUND_KM) and (np.int(t_btemp)) < 220:
+                    C_flag[i_h,i_w] = 1
+                    print ('found at ' + str(i_w) + ' and ' + str(i_h))
     C_Core = C_flag[:]     
     
     #%% Start spreading
@@ -262,7 +262,7 @@ for C_i in range(221,222):
     while flag == 0: 
         maximum_coordinates = peak_local_max(maximum_fil_result,min_distance = min_distance_val, indices = True)
         min_distance_val +=1
-        if np.int(np.shape(maximum_coordinates)[0]) < 12:
+        if np.int(np.shape(maximum_coordinates)[0]) < 4:
             flag = 1
             
     markers_two = np.zeros([DIM_LAT,DIM_LON])
@@ -280,8 +280,8 @@ for C_i in range(221,222):
     
     C_flag = np.where(blobs_labels == max_blob_value,2,0)
 #    C_flag = np.where(blobs_labels == 10,2,0)
-#    C_flag = np.where(blobs_labels == 1,2,C_flag)
-#    C_flag = np.where(blobs_labels == 4,2,C_flag)
+    C_flag = np.where(blobs_labels == 2,2,C_flag)
+#    C_flag = np.where(blobs_labels == 3,2,C_flag)
 #    C_flag = np.where(blobs_labels == 5,2,C_flag)
     
      #%
@@ -316,16 +316,92 @@ for C_i in range(221,222):
     plt.subplot(223)
     im = plt.imshow(dist_transform_second,cmap='Greys_r',origin='lower')
     plt.plot(maximum_coordinates[:, 1], maximum_coordinates[:, 0], 'r.')
+    
     plt.subplot(224)
-
     im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
     im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
-    im2 = plt.imshow(C_mask_Core, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['green']),origin='lower',alpha=0.3)
     # Best track center
     plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
     plt.show()    
 
+    #%%
+    from matplotlib.ticker import FormatStrFormatter
+    fig = plt.figure()
+    csfont_tick = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 28}
+    csfont_ax = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 30}
+    im = plt.imshow(dist_transform_second,extent = (lon_min, lon_max, lat_min, lat_max), cmap='Greys_r',origin='lower')
+    im2 = plt.imshow(C_mask_Core, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['green']),origin='lower',alpha=0.4)
+    axes = plt.gca()
+    xmin = -85
+    xmax = -40
+    ymin = -20
+    ymax = 25
+    axes.set_xlim([xmin,xmax])
+    axes.set_ylim([ymin,ymax])
+#    plt.xlabel('Longitudes',**csfont_ax)
+#    plt.ylabel('Latitudes',**csfont_ax)
+    a = plt.gca()
+    a.set_xticklabels(a.get_xticks(), **csfont_tick)
+    a.set_yticklabels(a.get_yticks(), **csfont_tick)
+    plt.xticks(np.arange(xmin, xmax, 10.0))
+    plt.yticks(np.arange(ymin, ymax, 10.0))
+    fig.set_tight_layout({"pad": .0})
+    plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 5) 
+    a.yaxis.set_major_formatter(FormatStrFormatter('%g'))
+    a.xaxis.set_major_formatter(FormatStrFormatter('%g'))
+    fig.savefig(SAVDIR + "\\" + "1_a" +".png",dpi=200)
+#    ax.yaxis.set_major_formatter(FormatStrFormatter('%g'))
+    plt.close()
+#    plt.show()
+    #%%
+    fig = plt.figure()
+    im = plt.imshow(blobs_labels, extent = (lon_min, lon_max, lat_min, lat_max),  cmap=plt.cm.nipy_spectral,interpolation='nearest',origin='lower')
+    axes = plt.gca()
+    xmin = -85
+    xmax = -40
+    ymin = -20
+    ymax = 25
+    axes.set_xlim([xmin,xmax])
+    axes.set_ylim([ymin,ymax])
+#    plt.xlabel('Longitudes',**csfont_ax)
+#    plt.ylabel('Latitudes',**csfont_ax)
+    a = plt.gca()
+    a.set_xticklabels(a.get_xticks(), **csfont_tick)
+    a.set_yticklabels(a.get_yticks(), **csfont_tick)
+    fig.set_tight_layout({"pad": .0})
+    plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 5) 
+    plt.xticks(np.arange(xmin, xmax, 10.0))
+    plt.yticks(np.arange(ymin, ymax, 10.0))
+    a.yaxis.set_major_formatter(FormatStrFormatter('%g'))
+    a.xaxis.set_major_formatter(FormatStrFormatter('%g'))
+    fig.savefig(SAVDIR + "\\" + "1_b" +".png",dpi=200)
+    plt.close()
+#    plt.show()
+    #%%
+    fig = plt.figure()
+    im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
+    im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
 
-
+    axes = plt.gca()
+    xmin = -85
+    xmax = -40
+    ymin = -20
+    ymax = 25
+    axes.set_xlim([xmin,xmax])
+    axes.set_ylim([ymin,ymax])
+#    plt.xlabel('Longitudes',**csfont_ax)
+#    plt.ylabel('Latitudes',**csfont_ax)
+    a = plt.gca()
+    a.set_xticklabels(a.get_xticks(), **csfont_tick)
+    a.set_yticklabels(a.get_yticks(), **csfont_tick)
+    fig.set_tight_layout({"pad": .0})
+    plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 5) 
+    plt.xticks(np.arange(xmin, xmax, 10.0))
+    plt.yticks(np.arange(ymin, ymax, 10.0))
+    a.yaxis.set_major_formatter(FormatStrFormatter('%g'))
+    a.xaxis.set_major_formatter(FormatStrFormatter('%g'))
+    fig.savefig(SAVDIR + "\\" + "1_c" +".png",dpi=200)
+    plt.close()
+#    plt.show()
 #%% CLOSE HDF5 FILES
 Hfile_label.close()
