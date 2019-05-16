@@ -22,7 +22,7 @@ from skimage.morphology import reconstruction
 from scipy.spatial.distance import cdist
 
 WORKPLACE = r"C:\Users\z3439910\Documents\Kien\1_Projects\2_Msc\1_E1\5_GIS_project"
-IRDIR = WORKPLACE + r"\IRimages2012"
+IRDIR = WORKPLACE + r"\IRimages2013"
 BTDIR = WORKPLACE + r"\2_IBTrACSfiles"
 os.chdir(IRDIR)
 
@@ -110,20 +110,19 @@ DIM_BOUND = get_BTempimage_bound(LAT_BOUND[0],LAT_BOUND[1],LON_BOUND[0],LON_BOUN
 
 #%% Best track for a particular storm based on its serial
 # get TC estimated centers
-B_tracks = xr.open_dataset(BTDIR+"\\"+"Year.2012.ibtracs_all.v03r10.nc")
+B_tracks = xr.open_dataset(BTDIR+"\\"+"Year.2013.ibtracs_all.v03r10.nc")
 B_TC_serials = B_tracks['storm_sn'].values
 B_TC_names = B_tracks['name'].values
 
 #TC_serial_list = ["2012147N30284","2012147N30284","2012169N29291","2012176N26272","2012223N14317","2012229N28305","2012234N16315","2012235N11328", "2012242N13333", "2012242N24317"]
 #for TC_i in range(0,len(TC_serial_list)):    
 #for TC_i in range(0,3): 
-TC_serial = "2012215N12313"
+TC_serial = "2013204N11340"
 for i,j in enumerate(B_TC_serials):
     if j.decode("utf-8") == TC_serial:
         I_TC_idx = i
 ## extract variables into arrays
-#I_name = B_TC_names[I_TC_idx].decode("utf-8")
-I_name = "UNNAMED"
+I_name = B_TC_names[I_TC_idx].decode("utf-8")
 I_TC_time = B_tracks['source_time'].values[I_TC_idx,:]
 I_TC_time = pd.DataFrame(I_TC_time).dropna().values[:,0]
 print ("Starting processing TC " + I_name)
@@ -150,7 +149,7 @@ I_lat = I_time_interpolate['lat']
 I_lon = I_time_interpolate['lon']
 
 SAVDIR = WORKPLACE + r"\3_Figures\\" + TC_serial + "_" + I_name
-
+#SAVDIR = WORKPLACE + r"\3_Figures\\" + TC_serial + "_" + I_name
 DIM_LAT = DIM_BOUND[1]-DIM_BOUND[0] + 1
 DIM_LON = DIM_BOUND[3]-DIM_BOUND[2] + 1
 DIM_TIME = np.shape(I_time_interpolate['time'])[0]
@@ -158,7 +157,7 @@ DIM_TIME = np.shape(I_time_interpolate['time'])[0]
 ##%% Start spreading 
 # open the label HDF5 file
 HFILE_DIR = SAVDIR + r"\\" + TC_serial + r"_" + I_name + r'_labels.h5'
-Hfile_label = h5py.File(HFILE_DIR,'r+')  
+Hfile_label = h5py.File(HFILE_DIR,'r')  
 C_label_TC = Hfile_label['label_TC']
 
 # define some variables
@@ -175,11 +174,11 @@ S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
     
     ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     #%% WHOLE RUN
-    for C_i in range(1,DIM_TIME):
+    for C_i in range(144,145):
 #    for C_i in range(44,45):
         
         #% Acquire BT images
-        C_label_TC[C_i,:,:] = np.zeros([DIM_LAT,DIM_LON])
+        
         BTemp_filename = r"merg_"+ time_to_string_without_min(I_year[C_i],I_month[C_i],I_day[C_i],I_hour[C_i]) + r"_4km-pixel.nc4"
         
         if I_minute[C_i] == 0:
@@ -200,143 +199,45 @@ S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
             mask = np.isnan(C_BTemp)
             C_BTemp[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), C_BTemp[~mask])
     
-        #% Apply previous mask to the current frame
-#        if C_i == 216:
-#            C_flag_prev = C_label_TC[C_i-2,:,:][:] 
-#        else:
-        C_flag_prev = C_label_TC[C_i-1,:,:][:] 
         C_flag = C_label_TC[C_i,:,:][:]
-        C_flag_temp = C_label_TC[C_i,:,:][:]
-        
-        # calculate how much the BT center is shifted
-        I_idx_prev = get_coord_to_idx(I_lat[C_i-1],I_lon[C_i-1])
-        I_idx = get_coord_to_idx(I_lat[C_i],I_lon[C_i])
-        laty_shift = I_idx[0] - I_idx_prev[0]
-        lonx_shift = I_idx[1] - I_idx_prev[1]
-        
-        
-        # shift the previous mask accordingly
-        C_flag_prev_idx = np.where(C_flag_prev>0)
-        laty_prev_idx = C_flag_prev_idx[0]
-        lonx_prev_idx = C_flag_prev_idx[1]
-        laty_current_idx = C_flag_prev_idx[0] + laty_shift
-        lonx_current_idx = C_flag_prev_idx[1] + lonx_shift
-        C_flag_temp[laty_current_idx, lonx_current_idx] = 2
-        
-
-#        C_flag_temp [I_idx[0]-r:I_idx[0]+r,I_idx[1]-r:I_idx[1]+r] = C_flag_prev[I_idx_prev[0]-r:I_idx_prev[0]+r,I_idx_prev[1]-r:I_idx_prev[1]+r] 
-#        C_flag_temp = C_flag_prev
-        # eliminate all value from the previous mask now become > 280
-        C_flag_core = np.where(C_BTemp > 280, 0,C_flag_temp)
-        C_flag_core = C_flag_core.astype(np.uint8)
-        blobs_labels_core = measure.label(C_flag_core,neighbors=4, background=0)
-        
-        #% Find all separate blobs after applying the previous mask, only keep the max volume blob
-#        regions_core = measure.regionprops(blobs_labels_core)
-        min_distance_from_centre = 99999999
-        C_flag_core_volume = np.count_nonzero(C_flag_core)
-        unique_labels = np.unique(blobs_labels_core)
-        for label in unique_labels:
-#        for label in range(135,136):
-            if label >0:
-                prop_volume = np.count_nonzero(blobs_labels_core == label)
-                if prop_volume > C_flag_core_volume*0.2:
-                    props_indices_list = np.argwhere(blobs_labels_core == label) #list of indices
-                    prop_lat_y = np.asarray([C_lat[i] for i in props_indices_list[:,0]]) # separate two columns and refer to C_lat and C_lon
-                    prop_lon_x = np.asarray([C_lon[i] for i in props_indices_list[:,1]])
-                    props_coords_list = np.column_stack((prop_lat_y,prop_lon_x)) # merge back to make 2-D array
-                    distances = cdist(np.array([[I_lat[C_i], I_lon[C_i]]]),props_coords_list)
-                    props_min_distance_from_centre = min(np.squeeze(distances))
-                    if props_min_distance_from_centre < min_distance_from_centre:
-                        min_distance_from_centre = props_min_distance_from_centre
-                        chosen_label = label
-                    
-        #%
-        C_flag_core = np.where(blobs_labels_core == chosen_label, 2, 0)
-            
-        
-        #% Start spreading
-        C_binary = np.where(C_BTemp>280,0,C_BTemp)
-        C_binary = np.where(C_binary>1,1,C_binary)
-        C_binary_cut = np.zeros([DIM_LAT,DIM_LON])
-    #    r = 500 #the bounding box side = 2r
-    #    C_binary_cut[I_idx[0]-r:I_idx[0]+r,I_idx[1]-r:I_idx[1]+r] = C_binary[I_idx[0]-r:I_idx[0]+r,I_idx[1]-r:I_idx[1]+r] 
-        C_binary8 = C_binary.astype(np.uint8)
-        
-        kernel = np.ones((3,3),np.uint8)
-        opening = cv2.morphologyEx(C_binary8,cv2.MORPH_OPEN,kernel, iterations = 2)
-        dist_transform = cv2.distanceTransform(opening,cv2.DIST_L2,0)
-        ret, sure_fg = cv2.threshold(dist_transform,0.04*dist_transform.max(),255,0)
-    
-        dist_transform = cv2.distanceTransform(opening,cv2.DIST_L2,0)
-        labels_ws = watershed(-dist_transform, C_flag_core, mask=C_binary8)
-        
-        C_binary8_second = np.where(labels_ws>0, C_binary8, 0)
-        
-        C_flag_overflow = np.where(labels_ws == 0, 0,labels_ws)
-        C_flag_overflow = C_flag_overflow.astype(np.uint8)
-    #%de')
-        
-        #% Compare the mask obtained from previous mask and the current overflow mask
-        C_flag_compared = C_flag_overflow - C_flag_core
-        blobs_labels_compared = measure.label(C_flag_compared,neighbors=4, background=0) # identify separate blobs
-        
-        volume_core = np.count_nonzero(C_flag_core)
-        C_flag = C_flag_core[:]
-        unique_labels = np.unique(blobs_labels_compared)
-        
-        volume_core = np.count_nonzero(C_flag_core)
-        if volume_core < 8000:
-            volume_ratio = 5
-        elif volume_core > 8000 and volume_core < 15000:
-            volume_ratio = 3
-        elif volume_core > 15000 and volume_core < 30000:
-            volume_ratio = 1.5
-        elif volume_core > 30000 and volume_core < 90000:
-            volume_ratio = 0.3
-        elif volume_core > 90000 and volume_core < 120000:
-            volume_ratio = 0.2
-        elif volume_core > 120000 :
-            volume_ratio = 0.05
-        # Go through all separate blobs, if volume less than 50 percent of the core mask then select
-        for label_i in unique_labels:
-            if label_i > 0:
-                volume_label = np.count_nonzero(blobs_labels_compared==label_i)   
-                if volume_label < volume_core*volume_ratio:
-                    C_flag = np.where(blobs_labels_compared==label_i,C_flag_overflow,C_flag)
-    
-        #%
-        C_label_TC[C_i,:,:] = C_flag.astype(np.uint8)  
-        
-        #% Plot image
         C_mask_TC = np.where(C_flag == 0, np.NaN , C_flag)
         
-        
-        #% plot IR image and the center point
-        fig = plt.figure()
         lat_max = np.round(np.max(C_lat),1)
         lat_min = np.round(np.min(C_lat),1)
         lon_max = np.round(np.max(C_lon),1)
         lon_min = np.round(np.min(C_lon),1)
         filename = TC_serial+ "_" + I_name + "_" + time_to_string_with_min(I_year[C_i], I_month[C_i], I_day[C_i], I_hour[C_i], I_minute[C_i])
-        
-        #% Plot BT image with 3 labels
+
+        #%
+        from matplotlib.ticker import FormatStrFormatter
+        fig = plt.figure()
+        csfont_tick = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 28}
+        csfont_ax = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 30}
         im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
         im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
-       
-        # Best track center
-        plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
-            
-        ax = plt.gca()
-        ax.set_title(filename)
-        ax.set_xlabel('Longitude')
-        ax.set_ylabel('Latitude')
-        fig.savefig(SAVDIR + "\\"  + filename +".png",dpi=200)
+        axes = plt.gca()
+        xmin = -55
+        xmax = -15
+        ymin = -5
+        ymax = 35
+        axes.set_xlim([xmin,xmax])
+        axes.set_ylim([ymin,ymax])
+        plt.xlabel('Longitudes',**csfont_ax)
+        plt.ylabel('Latitudes',**csfont_ax)
+        a = plt.gca()
+        a.set_xticklabels(a.get_xticks(), **csfont_tick)
+        a.set_yticklabels(a.get_yticks(), **csfont_tick)
+        plt.xticks(np.arange(xmin, xmax, 10.0))
+        plt.yticks(np.arange(ymin, ymax, 10.0))
+        fig.set_tight_layout({"pad": .0})
+        plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 5) 
+        a.yaxis.set_major_formatter(FormatStrFormatter('%g'))
+        a.xaxis.set_major_formatter(FormatStrFormatter('%g'))
+        fig.savefig(SAVDIR + "\\" + "3_c" +".png",dpi=200)
+    #    ax.yaxis.set_major_formatter(FormatStrFormatter('%g'))
         plt.close()
-        
-#        print(filename + " done")
-    #    plt.show()            
-    #%
+#        plt.show() 
+    #%%
     elapsed_time_overall = time.time() - start_time_overall
     print ('Cloud extraction for all done in ' +  time.strftime("%H:%M:%S", time.gmtime(elapsed_time_overall)))
     

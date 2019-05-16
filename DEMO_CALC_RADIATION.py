@@ -30,8 +30,6 @@ LAT_BOUND = [-20,60] #NA Basin
 LON_BOUND = [-120,0] #NA Basin
 r = 500
 
-
-
 #% Functions
 def calcdistance_km(latA,lonA,latB,lonB):
     dist = np.sqrt(np.square(latA-latB)+np.square(lonA-lonB))*111
@@ -284,28 +282,75 @@ mask_pc_sw_dur = (sum(mask_sw_dur)*16)/(sum(sum_sw_dur)*12321)
 #print ("Percentage of shortwave contribution in the NA Ocean during TC life: " + str(mask_pc_sw_dur*100)+ " percent")
 mask_pc_lw_dur = (sum(mask_lw_dur)*16)/(sum(sum_lw_dur)*12321)
 #print ("Percentage of longwave contribution in the NA Ocean during TC life: " + str(mask_pc_lw_dur*100)+ " percent")
-#%
+#%%
+mask_pc_sw_filled = np.where(np.isnan(mask_pc_sw),0,mask_pc_sw)
+mask_pc_lw_filled = np.where(np.isnan(mask_pc_lw),0,mask_pc_lw)
 
+#%%
+csfont_tick = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 20}
+csfont_ax = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 20}
 
 filename = TC_serial+ "_" + I_name
 fig = plt.figure()
-plt.plot(mask_pc_sw*100)
+plt.plot(mask_pc_sw_filled*100)
 ax = plt.gca()
-ax.set_title(filename + "_Shortwave Contribution in the NA Ocean"+"\n Total: " +str(np.round(mask_pc_sw_dur*100,3)) + "%")
-ax.set_xlabel("from "+ str(I_time_interpolate['time'].values[I_i_min])[0:-10] + " to " + str(I_time_interpolate['time'].values[I_i_max])[0:-10]) 
-ax.set_ylabel('Percent')             
-fig.savefig(SAVDIR_RAD + "\\" + filename+ "_SW.png",dpi=300)
-
+#ax.set_title(filename + "_Shortwave Contribution in the NA Ocean"+"\n Total: " +str(np.round(mask_pc_sw_dur*100,3)) + "%")
+ax.set_xlabel(str(I_time_interpolate['time'].values[I_i_min])[0:-10] + " to " + str(I_time_interpolate['time'].values[I_i_max])[0:-10],**csfont_ax) 
+ax.set_ylabel('Percent',**csfont_ax)
+ax.set_yticklabels(ax.get_yticks(), **csfont_tick)  
+plt.tick_params(
+    axis='x',          # changes apply to the x-axis
+    which='both',      # both major and minor ticks are affected
+    bottom=False,      # ticks along the bottom edge are off
+    top=False,         # ticks along the top edge are off
+    labelbottom=False) # labels along the bottom edge are off          
+#fig.savefig(SAVDIR_RAD + "\\" + filename+ "_SW.png",dpi=300)
+#plt.close()
+plt.show()
+#%%
+filename = TC_serial+ "_" + I_name
 fig = plt.figure()
-plt.plot(mask_pc_lw*100)
+plt.plot(mask_pc_lw_filled*100)
 ax = plt.gca()
-ax.set_title(filename + "_Longwave Contribution in the NA Ocean"+"\n Total: " +str(np.round(mask_pc_lw_dur*100,3)) + "%")
-ax.set_xlabel("from "+ str(I_time_interpolate['time'].values[I_i_min])[0:-10] + " to " + str(I_time_interpolate['time'].values[I_i_max])[0:-10])
-ax.set_ylabel('Percent')             
-fig.savefig(SAVDIR_RAD  + "\\" + filename+ "_LW.png",dpi=300)
+#ax.set_title(filename + "_Shortwave Contribution in the NA Ocean"+"\n Total: " +str(np.round(mask_pc_sw_dur*100,3)) + "%")
+ax.set_xlabel(str(I_time_interpolate['time'].values[I_i_min])[0:-10] + " to " + str(I_time_interpolate['time'].values[I_i_max])[0:-10],**csfont_ax) 
+ax.set_ylabel('Percent',**csfont_ax)
+ax.set_yticklabels(ax.get_yticks(), **csfont_tick)  
+plt.tick_params(
+    axis='x',          # changes apply to the x-axis
+    which='both',      # both major and minor ticks are affected
+    bottom=False,      # ticks along the bottom edge are off
+    top=False,         # ticks along the top edge are off
+    labelbottom=False) # labels along the bottom edge are off          
+fig.savefig(SAVDIR_RAD + "\\" + filename+ "_LW.png",dpi=300)
+plt.close()
+#%%
+csfont_tick = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 20}
+csfont_ax = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 20}
 
-#%
-#%
+filename = TC_serial+ "_" + I_name
+fig = plt.figure()
+plt.rc('font',family='Times New Roman')
+plt.rc('legend',fontsize=18) # using a size in points
+plt.plot(mask_pc_sw_filled*100,'g')
+plt.plot(mask_pc_lw_filled*100,'r')
+ax = plt.gca()
+#ax.set_title(filename + "_Shortwave Contribution in the NA Ocean"+"\n Total: " +str(np.round(mask_pc_sw_dur*100,3)) + "%")
+ax.set_xlabel(str(I_time_interpolate['time'].values[I_i_min])[0:-10] + " to " + str(I_time_interpolate['time'].values[I_i_max])[0:-10],**csfont_ax) 
+ax.set_ylabel('Percent',**csfont_ax)
+ax.set_yticklabels(ax.get_yticks(), **csfont_tick)  
+plt.legend(['SW contribution','LW contribution'],loc='upper left')
+plt.tick_params(
+    axis='x',          # changes apply to the x-axis
+    which='both',      # both major and minor ticks are affected
+    bottom=False,      # ticks along the bottom edge are off
+    top=False,         # ticks along the top edge are off
+    labelbottom=False) # labels along the bottom edge are off          
+fig.savefig(SAVDIR_RAD + "\\" + filename+ "_SWLW.png",dpi=300)
+plt.close()
+#plt.show()
+
+#%%
 
 HFILE_RAD_DIR = SAVDIR_RAD + r"\\" + TC_serial + r"_" + I_name + r'_radiation.h5'
 Hfile_rad = h5py.File(HFILE_RAD_DIR,'w')

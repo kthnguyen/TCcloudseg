@@ -8,30 +8,53 @@ Created on Sun Aug 19 21:38:08 2018
 import numpy as np
 import xarray as xr
 import pandas as pd
-import matplotlib.pyplot as plt
-import time
-from matplotlib import colors
-import h5py
-from scipy import ndimage
 import os
 import cv2
+import matplotlib.pyplot as plt
+import time
+import h5py
+
+from scipy import ndimage
+from matplotlib import colors
 from skimage.morphology import watershed
 from skimage import measure
 from skimage.feature import peak_local_max
 from skimage.morphology import reconstruction
+from scipy.spatial.distance import cdist
 
 WORKPLACE = r"C:\Users\z3439910\Documents\Kien\1_Projects\2_Msc\1_E1\5_GIS_project"
 IRDIR = WORKPLACE + r"\IRimages2012"
 BTDIR = WORKPLACE + r"\2_IBTrACSfiles"
 os.chdir(IRDIR)
-
-#% CONSTANT
-TC_serial = '2012215N12313'
+#%
+CHOSEN_YEAR = "2012"
+BASIN = "SI"
 IMAG_RES = 4 #km
-DEG_TO_KM = 111 #ratio
-LAT_BOUND = [-20,60] #NA Basin
-LON_BOUND = [-120,0] #NA Basin
 r = 500
+DEG_TO_KM = 111 #ratio
+
+if BASIN == "WP":
+    LAT_BOUND = [-20,60] #WP Basin
+    LON_BOUND = [60,180] #WP Basin
+    B_tracks = xr.open_dataset(BTDIR+"\\"+"IBTrACS.WP.v04r00.nc")
+elif BASIN == "EP": 
+    LAT_BOUND = [-20,60] #WP Basin
+    LON_BOUND = [-180,-60] #WP Basin
+    B_tracks = xr.open_dataset(BTDIR+"\\"+"IBTrACS.EP.v04r00.nc")
+elif BASIN == "NI": 
+    LAT_BOUND = [-20,60] #WP Basin
+    LON_BOUND = [0,120] #WP Basin
+    B_tracks = xr.open_dataset(BTDIR+"\\"+"IBTrACS.NI.v04r00.nc")
+elif BASIN == "SI": 
+    LAT_BOUND = [-60,20] #WP Basin
+    LON_BOUND = [0,150] #WP Basin
+    B_tracks = xr.open_dataset(BTDIR+"\\"+"IBTrACS.SI.v04r00.nc")
+
+B_TC_serials_decode = [x.decode("utf-8") for x in B_tracks['sid'].values]
+
+TC_indices = [i for i,x in enumerate(B_TC_serials_decode) if x.startswith(CHOSEN_YEAR)==True]
+TC_serials = [x for i,x in enumerate(B_TC_serials_decode) if x.startswith(CHOSEN_YEAR)==True]
+#%
 #% Functions
 def calcdistance_km(latA,lonA,latB,lonB):
     dist = np.sqrt(np.square(latA-latB)+np.square(lonA-lonB))*111
@@ -109,29 +132,43 @@ def get_BTempimage_bound(latmin,latmax,lonmin,lonmax):
 
 DIM_BOUND = get_BTempimage_bound(LAT_BOUND[0],LAT_BOUND[1],LON_BOUND[0],LON_BOUND[1])#incices from BT images
 
-#% Best track for a particular storm based on its serial
-# get TC estimated centers
-B_tracks = xr.open_dataset(BTDIR+"\\"+"Year.2012.ibtracs_all.v03r10.nc")
+##%%
+#latmin =LAT_BOUND[0]
+#latmax = LAT_BOUND[1]
+#lonmin = LON_BOUND[0]
+#lonmax =LON_BOUND[1]
+#BTempimage = xr.open_dataset(WORKPLACE+ "\IRimages2012\merg_2012080100_4km-pixel.nc4")
+#BTemp_lat = BTempimage['lat'].values[:]
+#BTemp_lon = BTempimage['lon'].values
+#lat_bound = [i for i,val in enumerate(BTemp_lat) if (val>latmin and val<latmax)]   
+#lat_val_bound = [val for i,val in enumerate(BTemp_lat) if (val>latmin and val<latmax)] 
+#lon_bound = [i for i,val in enumerate(BTemp_lon) if (val>lonmin and val<lonmax)]   
+#lon_val_bound = [val for i,val in enumerate(BTemp_lon) if (val>lonmin and val<lonmax)] 
 
-B_TC_serials = B_tracks['storm_sn'].values
-B_TC_names = B_tracks['name'].values
+#%%
+i = 18
 
-
-for i,j in enumerate(B_TC_serials):
-    if j.decode("utf-8") == TC_serial:
-        I_TC_idx = i
-## extract variables into arrays
-I_name = B_TC_names[I_TC_idx].decode("utf-8")
+TC_serial = TC_serials[i]
+TC_index = TC_indices[i]
+#%
+B_TC_names = [x.decode("utf-8") for x in B_tracks['name'].values]
+I_name = B_TC_names[TC_index]
+I_name = I_name.replace(r":",r"_")
+#%
 #I_name = "UNNAMED"
-I_TC_time = B_tracks['source_time'].values[I_TC_idx,:]
-I_TC_time = pd.DataFrame(I_TC_time).dropna().values[:,0]
+I_TC_time = B_tracks['time'][TC_index,:]
+I_TC_time =  I_TC_time.dropna('date_time').values
 
 
-I_lat = B_tracks['lat_for_mapping'].values[I_TC_idx,:]
+#%
+
+I_lat = B_tracks['lat'].values[TC_index,:]
 I_lat = pd.DataFrame(I_lat).dropna().values[:,0]
-I_lon = B_tracks['lon_for_mapping'].values[I_TC_idx,:]
+I_lon = B_tracks['lon'].values[TC_index,:]
 I_lon = pd.DataFrame(I_lon).dropna().values[:,0]
 
+
+#%
 # interpolate best track lat long to 0.5-hour intervals
 df = pd.DataFrame({'time':I_TC_time,'lat':I_lat,'lon':I_lon})
 df = df.set_index('time')
@@ -147,7 +184,8 @@ I_minute = pd.to_datetime(I_time_interpolate['time'].values).minute
 I_lat = I_time_interpolate['lat']
 I_lon = I_time_interpolate['lon']
 
-SAVDIR = WORKPLACE + r"\3_Figures\\" + TC_serial + "_" + I_name
+#%
+SAVDIR = r"K:\THEJUDGEMENT\BASINS_RESULTS_2012" + "\\"+ BASIN + "\\" + TC_serial + "_" + I_name
 os.mkdir(SAVDIR)
 
 #% Create an HDF5 file to store label for the current storm
@@ -181,8 +219,11 @@ S_NO_PX = np.round(S_BOUND_KM/IMAG_RES)
 S_BOUND_TOT_KM = 1110 #km
 S_BOUND_TOT_DEG = S_BOUND_TOT_KM/111 #convert km to deg
 S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
+
+
 #%% FIRST FRAME
-for C_i in range(0,1):
+C_i_start = 0
+for C_i in range(C_i_start,C_i_start+1):
     
     #% Acquire BT images
     C_label_TC[C_i,:,:] = np.zeros([DIM_LAT,DIM_LON])
@@ -225,13 +266,26 @@ for C_i in range(0,1):
                 C_flag[i_h,i_w] = 1
                 print ('found at ' + str(i_w) + ' and ' + str(i_h))
     C_Core = C_flag[:]     
-    
+#    
+##%
+    fig = plt.figure()
+    lat_max = np.round(np.max(C_lat),1)
+    lat_min = np.round(np.min(C_lat),1)
+    lon_max = np.round(np.max(C_lon),1)
+    lon_min = np.round(np.min(C_lon),1)
+    im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max), cmap='Greys',origin='lower')
+    plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
+    plt.show()
     #%% Start spreading
+    BOUNDADRY_R = 500 #Default: 500
+    NO_MAXIMA = 16 #Default: 16
+    C_BTEMP_MAX = 270 #Default: 270
+    
     I_idx = get_coord_to_idx(I_lat[C_i],I_lon[C_i])
-    C_binary = np.where(C_BTemp>270,0,C_BTemp)
+    C_binary = np.where(C_BTemp>C_BTEMP_MAX,0,C_BTemp)
     C_binary = np.where(C_binary>1,1,C_binary)
     C_binary_cut = np.zeros([DIM_LAT,DIM_LON])
-    r = 500 #the bounding box side = 2r
+    r = BOUNDADRY_R #the bounding box side = 2r
     C_binary_cut[I_idx[0]-r:I_idx[0]+r,I_idx[1]-r:I_idx[1]+r] = C_binary[I_idx[0]-r:I_idx[0]+r,I_idx[1]-r:I_idx[1]+r] 
     C_binary8 = C_binary_cut.astype(np.uint8)
     
@@ -260,10 +314,11 @@ for C_i in range(0,1):
     
     min_distance_val = 1
     flag = 0
+#    maximum_fil_result = maximum_fil_result[I_idx[0]-200:I_idx[0]+200,I_idx[1]-200:I_idx[1]+200]
     while flag == 0: 
         maximum_coordinates = peak_local_max(maximum_fil_result,min_distance = min_distance_val, indices = True)
         min_distance_val +=1
-        if np.int(np.shape(maximum_coordinates)[0]) < 16:
+        if np.int(np.shape(maximum_coordinates)[0]) < NO_MAXIMA:
             flag = 1
             
     markers_two = np.zeros([DIM_LAT,DIM_LON])
@@ -280,9 +335,9 @@ for C_i in range(0,1):
     max_blob_value = blobs_labels[max_idx[0],max_idx[1]]
     
     C_flag = np.where(blobs_labels == max_blob_value,2,0)
-#    C_flag = np.where(blobs_labels == 10,2,0)
+#    C_flag = np.where(blobs_labels == 7,2,C_flag)
 #    C_flag = np.where(blobs_labels == 1,2,C_flag)
-#    C_flag = np.where(blobs_labels == 4,2,C_flag)
+#    C_flag = np.where(blobs_labels == 3,2,C_flag)
 #    C_flag = np.where(blobs_labels == 5,2,C_flag)
     
      #%
@@ -315,7 +370,7 @@ for C_i in range(0,1):
     im = plt.imshow(blobs_labels, extent = (lon_min, lon_max, lat_min, lat_max),  cmap=plt.cm.nipy_spectral,interpolation='nearest',origin='lower')
 
     plt.subplot(223)
-    im = plt.imshow(dist_transform_second,cmap='Greys_r',origin='lower')
+    im = plt.imshow(maximum_fil_result,cmap='Greys_r',origin='lower')
     plt.plot(maximum_coordinates[:, 1], maximum_coordinates[:, 0], 'r.')
     plt.subplot(224)
 
@@ -325,8 +380,10 @@ for C_i in range(0,1):
     # Best track center
     plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
     plt.show()    
-
-
-
+#%
+#        C_flag_prev = C_label_TC[C_i,:,:][:] 
+#        fig = plt.figure()
+#        im = plt.imshow(C_flag_prev,  cmap='Greys',origin='lower')
+#        plt.show()
 #%% CLOSE HDF5 FILES
 Hfile_label.close()

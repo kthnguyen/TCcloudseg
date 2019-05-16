@@ -28,7 +28,7 @@ def sum1(input):
     return sum(map(sum, input)) 
 #%%
 
-Rdataset_2 = xr.open_dataset(RADDIR + r"\CERES_SYN1deg-1H_Terra-Aqua-MODIS_Ed4A_Subset_20120501-20121231.nc")
+Rdataset_2 = xr.open_dataset(RADDIR + r"\CERES_SYN1deg-1H_Terra-Aqua-MODIS_Ed4A_Subset_20130101-20130531.nc")
 R_time_2 = Rdataset_2['time'].values
 
 totalNA_sw_2 = 0
@@ -42,7 +42,7 @@ for R_i in range(0,np.shape(R_time_2)[0]):
     totalNA_lw_2 = totalNA_lw_2 + sum_a_lw*12321
     print (str(R_i))
     
-Rdataset_1 = xr.open_dataset(RADDIR + r"\CERES_SYN1deg-1H_Terra-Aqua-MODIS_Ed4A_Subset_20120101-20120430.nc")
+Rdataset_1 = xr.open_dataset(RADDIR + r"\CERES_SYN1deg-1H_Terra-Aqua-MODIS_Ed4A_Subset_20130601-20131231.nc")
 R_time_1 = Rdataset_1['time'].values
 
 totalNA_sw_1 = 0
@@ -92,3 +92,15 @@ totalNA_sw_p = pickle.load(f)
 totalNA_lw_p = pickle.load(f)
 totalNA_TC_sw_pc_p = pickle.load(f)
 totalNA_TC_lw_pc_p = pickle.load(f)
+#%%
+area = 12321*120*80
+steps = 5136+3624
+#%%
+for R_i in range(0,1):
+    a_sw = Rdataset_2.toa_sw_all_1h[R_i,:,:].values
+    a_lw = Rdataset_2.toa_lw_all_1h[R_i,:,:].values
+    sum_a_sw = sum1(a_sw)
+    sum_a_lw = sum1(a_lw)
+    totalNA_sw_2 = totalNA_sw_2 + sum_a_sw*12321
+    totalNA_lw_2 = totalNA_lw_2 + sum_a_lw*12321
+    print (str(R_i))

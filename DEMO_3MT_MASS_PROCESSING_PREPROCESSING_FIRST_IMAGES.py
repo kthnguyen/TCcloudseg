@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 """
+Created on Wed May  1 16:26:09 2019
+
+@author: z3439910
+"""
+
+# -*- coding: utf-8 -*-
+"""
 Created on Sun Aug 19 21:38:08 2018
 
 @author: z3439910
@@ -147,7 +154,7 @@ I_lat = I_time_interpolate['lat']
 I_lon = I_time_interpolate['lon']
 
 SAVDIR = WORKPLACE + r"\3_Figures\\" + TC_serial + "_" + I_name + "_DEMO"
-os.mkdir(SAVDIR)
+#os.mkdir(SAVDIR)
 
 #% Create an HDF5 file to store label for the current storm
 DIM_LAT = DIM_BOUND[1]-DIM_BOUND[0] + 1
@@ -181,7 +188,8 @@ S_BOUND_TOT_KM = 1110 #km
 S_BOUND_TOT_DEG = S_BOUND_TOT_KM/111 #convert km to deg
 S_NO_TOT_PX = np.round(S_BOUND_TOT_KM/IMAG_RES)
 #%% FIRST FRAME
-for C_i in range(0,1):
+C_i_start = 0
+for C_i in range(C_i_start,C_i_start+1):
     
     #% Acquire BT images
     C_label_TC[C_i,:,:] = np.zeros([DIM_LAT,DIM_LON])
@@ -262,7 +270,7 @@ for C_i in range(0,1):
     while flag == 0: 
         maximum_coordinates = peak_local_max(maximum_fil_result,min_distance = min_distance_val, indices = True)
         min_distance_val +=1
-        if np.int(np.shape(maximum_coordinates)[0]) < 4:
+        if np.int(np.shape(maximum_coordinates)[0]) < 16:
             flag = 1
             
     markers_two = np.zeros([DIM_LAT,DIM_LON])
@@ -319,39 +327,264 @@ for C_i in range(0,1):
     
     plt.subplot(224)
     im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
-    im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
+#    im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
+    im2 = plt.imshow(C_mask_Core, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['green']),origin='lower',alpha=0.6)
+  
     # Best track center
     plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 2) 
     plt.show()    
 
-    #%%
+#%%  NA images
+    fig = plt.figure()
+    csfont_tick = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 15}
+    csfont_ax = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 20}
+    lat_max = np.round(np.max(C_lat),1)
+    lat_min = np.round(np.min(C_lat),1)
+    lon_max = np.round(np.max(C_lon),1)
+    lon_min = np.round(np.min(C_lon),1)
+    filename = TC_serial+ "_" + I_name + "_" + time_to_string_with_min(I_year[C_i], I_month[C_i], I_day[C_i], I_hour[C_i], I_minute[C_i])
+    
+    im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
+#    im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
+    plt.xlabel('Longitudes',**csfont_ax)
+    plt.ylabel('Latitudes',**csfont_ax)
+    a = plt.gca()
+    a.set_xticklabels(a.get_xticks(), **csfont_tick)
+    a.set_yticklabels(a.get_yticks(), **csfont_tick)
+    a.set_title(r"North Atlantic Ocean at 1200h 01 Aug 2012",**csfont_ax)
+    fig.savefig(SAVDIR + "\\" + "1_a" +".png",dpi=400,bbox_inches="tight", pad_inches=0.3)
+    plt.close()
+    
+    
+#%%TC track
+    fig = plt.figure()
+    csfont_tick = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 15}
+    csfont_ax = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 20}
+    lat_max = np.round(np.max(C_lat),1)
+    lat_min = np.round(np.min(C_lat),1)
+    lon_max = np.round(np.max(C_lon),1)
+    lon_min = np.round(np.min(C_lon),1)
+    filename = TC_serial+ "_" + I_name + "_" + time_to_string_with_min(I_year[C_i], I_month[C_i], I_day[C_i], I_hour[C_i], I_minute[C_i])
+    
+    im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
+#    im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
+    plt.xlabel('Longitudes',**csfont_ax)
+    plt.ylabel('Latitudes',**csfont_ax)
+    a = plt.gca()
+    a.set_xticklabels(a.get_xticks(), **csfont_tick)
+    a.set_yticklabels(a.get_yticks(), **csfont_tick)
+    a.set_title(r"Tropical Cyclone ENERSTO centre track",**csfont_ax)
+    plt.plot(I_lon[::15],I_lat[::15],'or', markersize = 1.5) 
+    fig.savefig(SAVDIR + "\\" + "3_a" +".png",dpi=400,bbox_inches="tight", pad_inches=0.3)
+    plt.close()
+#    plt.show()
+#%% Centre core
+    from matplotlib.ticker import FormatStrFormatter
+    fig = plt.figure()
+    csfont_tick = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 20}
+    csfont_ax = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 20}
+    im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
+#    im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
+    im2 = plt.imshow(C_mask_Core, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['green']),origin='lower',alpha=0.6)
+    axes = plt.gca()
+    xmin = -65
+    xmax = -35
+    ymin = -5
+    ymax = 25
+    axes.set_xlim([xmin,xmax])
+    axes.set_ylim([ymin,ymax])
+    plt.xlabel('Longitudes',**csfont_ax)
+    plt.ylabel('Latitudes',**csfont_ax)
+    a = plt.gca()
+    a.set_xticklabels(a.get_xticks(), **csfont_tick)
+    a.set_yticklabels(a.get_yticks(), **csfont_tick)
+    plt.xticks(np.arange(xmin, xmax, 5.0))
+    plt.yticks(np.arange(ymin, ymax, 5.0))
+    fig.set_tight_layout({"pad": .0})
+    plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 5) 
+    a.yaxis.set_major_formatter(FormatStrFormatter('%g'))
+    a.xaxis.set_major_formatter(FormatStrFormatter('%g'))
+#    a.set_title(r"0700h 05 Aug 2012",**csfont_ax)
+    fig.savefig(SAVDIR  + "\\" + "4_a" +".png",dpi=400,bbox_inches="tight", pad_inches=0.3)
+    
+#%% Distance transform
     from matplotlib.ticker import FormatStrFormatter
     fig = plt.figure()
     csfont_tick = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 28}
     csfont_ax = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 30}
     im = plt.imshow(dist_transform_second,extent = (lon_min, lon_max, lat_min, lat_max), cmap='Greys_r',origin='lower')
-    im2 = plt.imshow(C_mask_Core, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['green']),origin='lower',alpha=0.4)
+#    im2 = plt.imshow(C_mask_Core, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['green']),origin='lower',alpha=0.4)
     axes = plt.gca()
-    xmin = -85
-    xmax = -40
-    ymin = -20
+    xmin = -65
+    xmax = -35
+    ymin = -5
     ymax = 25
     axes.set_xlim([xmin,xmax])
     axes.set_ylim([ymin,ymax])
-#    plt.xlabel('Longitudes',**csfont_ax)
-#    plt.ylabel('Latitudes',**csfont_ax)
+    plt.xlabel('Longitudes',**csfont_ax)
+    plt.ylabel('Latitudes',**csfont_ax)
     a = plt.gca()
     a.set_xticklabels(a.get_xticks(), **csfont_tick)
     a.set_yticklabels(a.get_yticks(), **csfont_tick)
-#        plt.xticks(np.arange(xmin, xmax, 100.0))
-#        plt.yticks(np.arange(ymin, ymax, 100.0))
+    plt.xticks(np.arange(xmin, xmax, 100.0))
+    plt.yticks(np.arange(ymin, ymax, 100.0))
     plt.xticks([])
     plt.yticks([])
     fig.set_tight_layout({"pad": .0})
     plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 5) 
     a.yaxis.set_major_formatter(FormatStrFormatter('%g'))
     a.xaxis.set_major_formatter(FormatStrFormatter('%g'))
-    fig.savefig(SAVDIR + "\\" + "1_a" +".png",dpi=200,bbox_inches="tight", pad_inches=0)
+    fig.savefig(SAVDIR + "\\" + "4_b" +".png",dpi=400,bbox_inches="tight", pad_inches=0)
+#    ax.yaxis.set_major_formatter(FormatStrFormatter('%g'))
+    plt.close()
+#    plt.show()
+#%% Maximum filter
+    from matplotlib.ticker import FormatStrFormatter
+    fig = plt.figure()
+    csfont_tick = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 28}
+    csfont_ax = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 30}
+    
+    im = plt.imshow(dist_transform_second,cmap='Greys_r',origin='lower')
+    plt.plot(maximum_coordinates[:, 1], maximum_coordinates[:, 0], 'r.')
+#    im2 = plt.imshow(C_mask_Core, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['green']),origin='lower',alpha=0.4)
+    axes = plt.gca()
+#    xmin = -65
+#    xmax = -35
+#    ymin = -5
+#    ymax = 25
+#    axes.set_xlim([xmin,xmax])
+#    axes.set_ylim([ymin,ymax])
+    plt.xlabel('Longitudes',**csfont_ax)
+    plt.ylabel('Latitudes',**csfont_ax)
+    a = plt.gca()
+    a.set_xticklabels(a.get_xticks(), **csfont_tick)
+    a.set_yticklabels(a.get_yticks(), **csfont_tick)
+    plt.xticks(np.arange(xmin, xmax, 100.0))
+    plt.yticks(np.arange(ymin, ymax, 100.0))
+    plt.xticks([])
+    plt.yticks([])
+    fig.set_tight_layout({"pad": .0})
+#    plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 5) 
+    a.yaxis.set_major_formatter(FormatStrFormatter('%g'))
+    a.xaxis.set_major_formatter(FormatStrFormatter('%g'))
+#    fig.savefig(SAVDIR + "\\" + "4_c" +".png",dpi=400,bbox_inches="tight", pad_inches=0)
+#    ax.yaxis.set_major_formatter(FormatStrFormatter('%g'))
+#    plt.close()
+    plt.show()
+#%%  Blobs
+    from matplotlib.ticker import FormatStrFormatter
+    fig = plt.figure()
+    csfont_tick = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 20}
+    csfont_ax = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 20}
+    im = plt.imshow(blobs_labels, extent = (lon_min, lon_max, lat_min, lat_max),  cmap=plt.cm.nipy_spectral,interpolation='nearest',origin='lower')
+    axes = plt.gca()
+    xmin = -65
+    xmax = -35
+    ymin = -5
+    ymax = 25
+    axes.set_xlim([xmin,xmax])
+    axes.set_ylim([ymin,ymax])
+    plt.xlabel('Longitudes',**csfont_ax)
+    plt.ylabel('Latitudes',**csfont_ax)
+    a = plt.gca()
+    a.set_xticklabels(a.get_xticks(), **csfont_tick)
+    a.set_yticklabels(a.get_yticks(), **csfont_tick)
+    plt.xticks(np.arange(xmin, xmax, 5.0))
+    plt.yticks(np.arange(ymin, ymax, 5.0))
+    fig.set_tight_layout({"pad": .0})
+    plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 5) 
+    a.yaxis.set_major_formatter(FormatStrFormatter('%g'))
+    a.xaxis.set_major_formatter(FormatStrFormatter('%g'))
+#    a.set_title(r"0700h 05 Aug 2012",**csfont_ax)
+    fig.savefig(SAVDIR  + "\\" + "4_d" +".png",dpi=400,bbox_inches="tight", pad_inches=0.3)
+    
+#%% Maximum filter
+    from matplotlib.ticker import FormatStrFormatter
+    fig = plt.figure()
+    csfont_tick = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 28}
+    csfont_ax = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 30}
+    im = plt.imshow(dist_transform_second,extent = (lon_min, lon_max, lat_min, lat_max), cmap='Greys_r',origin='lower')
+#    im2 = plt.imshow(C_mask_Core, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['green']),origin='lower',alpha=0.4)
+    axes = plt.gca()
+    xmin = -65
+    xmax = -35
+    ymin = -5
+    ymax = 25
+    axes.set_xlim([xmin,xmax])
+    axes.set_ylim([ymin,ymax])
+    plt.xlabel('Longitudes',**csfont_ax)
+    plt.ylabel('Latitudes',**csfont_ax)
+    a = plt.gca()
+    a.set_xticklabels(a.get_xticks(), **csfont_tick)
+    a.set_yticklabels(a.get_yticks(), **csfont_tick)
+    plt.xticks(np.arange(xmin, xmax, 100.0))
+    plt.yticks(np.arange(ymin, ymax, 100.0))
+    plt.xticks([])
+    plt.yticks([])
+    fig.set_tight_layout({"pad": .0})
+    plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 5) 
+    a.yaxis.set_major_formatter(FormatStrFormatter('%g'))
+    a.xaxis.set_major_formatter(FormatStrFormatter('%g'))
+    fig.savefig(SAVDIR + "\\" + "4_b" +".png",dpi=400,bbox_inches="tight", pad_inches=0)
+#    ax.yaxis.set_major_formatter(FormatStrFormatter('%g'))
+    plt.close()
+#    plt.show()
+#%% Final mask
+    from matplotlib.ticker import FormatStrFormatter
+    fig = plt.figure()
+    csfont_tick = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 20}
+    csfont_ax = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 20}
+    im = plt.imshow(C_BTemp, extent = (lon_min, lon_max, lat_min, lat_max),  cmap='Greys',origin='lower')
+    im2 = plt.imshow(C_mask_TC, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['yellow']),origin='lower',alpha=0.3)
+    axes = plt.gca()
+    xmin = -65
+    xmax = -35
+    ymin = -5
+    ymax = 25
+    axes.set_xlim([xmin,xmax])
+    axes.set_ylim([ymin,ymax])
+    plt.xlabel('Longitudes',**csfont_ax)
+    plt.ylabel('Latitudes',**csfont_ax)
+    a = plt.gca()
+    a.set_xticklabels(a.get_xticks(), **csfont_tick)
+    a.set_yticklabels(a.get_yticks(), **csfont_tick)
+    plt.xticks(np.arange(xmin, xmax, 5.0))
+    plt.yticks(np.arange(ymin, ymax, 5.0))
+    fig.set_tight_layout({"pad": .0})
+    plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 5) 
+    a.yaxis.set_major_formatter(FormatStrFormatter('%g'))
+    a.xaxis.set_major_formatter(FormatStrFormatter('%g'))
+#    a.set_title(r"0700h 05 Aug 2012",**csfont_ax)
+    fig.savefig(SAVDIR  + "\\" + "4_e" +".png",dpi=400,bbox_inches="tight", pad_inches=0.3)
+    
+    #%%
+    from matplotlib.ticker import FormatStrFormatter
+    fig = plt.figure()
+    csfont_tick = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 28}
+    csfont_ax = {'fontname':'Times New Roman','weight' : 'normal', 'size' : 30}
+    im = plt.imshow(dist_transform_second,extent = (lon_min, lon_max, lat_min, lat_max), cmap='Greys_r',origin='lower')
+#    im2 = plt.imshow(C_mask_Core, extent = (lon_min, lon_max, lat_min, lat_max), cmap=colors.ListedColormap(['green']),origin='lower',alpha=0.4)
+    axes = plt.gca()
+    xmin = -65
+    xmax = -35
+    ymin = -5
+    ymax = 25
+    axes.set_xlim([xmin,xmax])
+    axes.set_ylim([ymin,ymax])
+    plt.xlabel('Longitudes',**csfont_ax)
+    plt.ylabel('Latitudes',**csfont_ax)
+    a = plt.gca()
+    a.set_xticklabels(a.get_xticks(), **csfont_tick)
+    a.set_yticklabels(a.get_yticks(), **csfont_tick)
+    plt.xticks(np.arange(xmin, xmax, 100.0))
+    plt.yticks(np.arange(ymin, ymax, 100.0))
+    plt.xticks([])
+    plt.yticks([])
+    fig.set_tight_layout({"pad": .0})
+    plt.plot(I_lon[C_i],I_lat[C_i],'or', markersize = 5) 
+    a.yaxis.set_major_formatter(FormatStrFormatter('%g'))
+    a.xaxis.set_major_formatter(FormatStrFormatter('%g'))
+    fig.savefig(SAVDIR + "\\" + "4_b" +".png",dpi=400,bbox_inches="tight", pad_inches=0)
 #    ax.yaxis.set_major_formatter(FormatStrFormatter('%g'))
     plt.close()
 #    plt.show()

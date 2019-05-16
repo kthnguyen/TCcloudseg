@@ -30,8 +30,6 @@ LAT_BOUND = [-20,60] #NA Basin
 LON_BOUND = [-120,0] #NA Basin
 r = 500
 
-
-
 #% Functions
 def calcdistance_km(latA,lonA,latB,lonB):
     dist = np.sqrt(np.square(latA-latB)+np.square(lonA-lonB))*111
@@ -157,7 +155,7 @@ I_minute = pd.to_datetime(I_time_interpolate['time'].values).minute
 I_lat = I_time_interpolate['lat']
 I_lon = I_time_interpolate['lon']
 
-SAVDIR_RAD = WORKPLACE + r"\3_Figures\\" + TC_serial + "_" + I_name + r"\Radiation"
+SAVDIR_RAD = WORKPLACE + r"\3_Figures\\" + TC_serial + "_" + I_name + r"\Radiation280"
 os.mkdir(SAVDIR_RAD)
 
 SAVDIR = WORKPLACE + r"\3_Figures\\" + TC_serial + "_" + I_name
